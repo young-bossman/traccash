@@ -57,3 +57,32 @@ Rejected with the misplaced-comma message instead of guessing.
 loaded, and `flutter_localizations` only loads it once `MaterialApp` builds. `main()` awaits
 `initializeDateFormatting('en_GB')` before `runApp`, so formatting is safe from startup code too.
 Unit tests do the same in `setUpAll`.
+
+**2026-10-25 · Shared validation for repositories and fakes** — Widget tests run against fakes;
+if the fakes enforced looser rules, tests could pass while the app rejects the same input. The
+expense and category rules are pure functions returning an `AppError` or null, called by both the
+Drift repositories and the fakes, which also throw the same typed errors for missing records.
+
+**2026-10-25 · Lengths in code points** — SQLite's `length()` counts code points, Dart's
+`String.length` counts UTF-16 units and Flutter's `maxLength` counts graphemes. Notes (200) and
+category names (20) are counted with `runes.length` so the repository and the CHECK constraint
+agree; the form must count the same way.
+
+**2026-10-25 · Case-insensitive names beyond ASCII** — `COLLATE NOCASE` only folds A–Z, so
+"École" and "école" would both be stored. The repository also compares names with
+`toLowerCase()` inside the insert transaction; the NOCASE unique constraint remains the backstop.
+
+**2026-10-25 · Timestamps as UTC ISO text** — Drift's default stores whole Unix seconds. With
+`store_date_time_values_as_text`, `created_at` / `updated_at` keep milliseconds and an explicit `Z`,
+read plainly in a SQLite browser, and come back as UTC. Repositories always write
+`DateTime.now().toUtc()`. Cost: slightly larger rows.
+
+**2026-10-25 · Expense carries its Category** — Screens need the category name and icon for every
+row, including archived categories. Joining in the repository query keeps that in one stream
+instead of every screen combining expenses with a category map. Cost: a category change re-emits
+expense streams, which is what we want for labels.
+
+**2026-10-25 · Restore by explicit id under AUTOINCREMENT** — Undo must bring back the same id.
+`AUTOINCREMENT` makes SQLite keep a high-water mark in `sqlite_sequence`, so a deleted id is never
+given to a new row and re-inserting it is safe. Restore checks for an existing row and uses a plain
+insert rather than `INSERT OR IGNORE`, which would also silently skip CHECK violations.

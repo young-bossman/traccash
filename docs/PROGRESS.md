@@ -6,7 +6,7 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
 
 - [x] T1 · Foundation: packages, fonts, theme, app shell
 - [x] T2 · Money and date utilities
-- [ ] T3 · Data layer: models, database, repositories, demo seeder
+- [x] T3 · Data layer: models, database, repositories, demo seeder
 - [ ] T4 · Expenses page
 - [ ] T5 · Add / edit expense page
 - [ ] T6 · Home page
@@ -49,6 +49,36 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
 - `lib/main.dart`: now async and awaits `initializeDateFormatting(dateLocale)` before `runApp`.
 - Tests: `test/unit/money_test.dart`, `test/unit/dates_test.dart`.
 
+### T3 · Data layer (2026-10-25)
+
+- `lib/core/errors/app_error.dart`: sealed `AppError` (`InvalidAmountError`, `InvalidDateError`,
+  `NoteTooLongError`, `CategoryNameError`, `InvalidCategoryIconError`, `DuplicateCategoryError`,
+  `CategoryUnavailableError`, `CategoryNotFoundError`, `ExpenseNotFoundError`, `StorageError`),
+  each with a user-facing `message`.
+- Domain: `features/expenses/domain/expense.dart` (`Expense` carrying its `Category`,
+  `ExpenseDraft`), `features/categories/domain/category.dart` (`Category`, `presetCategories`,
+  `userIconKeys`).
+- Shared validation, called by the Drift repositories **and** the test fakes:
+  `features/expenses/domain/expense_validation.dart` (`validateExpenseDraft`,
+  `validateExpenseCategory`, `normalizeNote`), `features/categories/domain/category_validation.dart`
+  (`normalizeCategoryName`, `validateNewCategory`, `findCategoryNamed`).
+- `lib/data/database/`: `tables.dart`, `app_database.dart` + generated `app_database.g.dart`,
+  `local_date_converter.dart`, `db_errors.dart` (`guardDb`, `guardDbStream`, `SqliteConstraint`),
+  `database_provider.dart` (`appDatabaseProvider`), `demo_seed.dart` (`seedDemoData`,
+  `demoSeederProvider`).
+- `build.yaml`: `store_date_time_values_as_text: true`.
+- `drift_schemas/drift_schema_v1.json`: v1 snapshot from `dart run drift_dev schema dump`.
+- Repositories (contract + provider, Drift implementation):
+  `features/expenses/data/{expense_repository,drift_expense_repository}.dart`,
+  `features/categories/data/{category_repository,drift_category_repository}.dart`,
+  `features/settings/data/{settings_repository,drift_settings_repository}.dart`.
+- Settings placeholder: temporary "Load demo data" button, only when `kDebugMode`.
+- Fakes: `test/fakes/fake_{expense,category,settings}_repository.dart`, `fake_streams.dart`.
+  Each has `failNextWrite` to simulate a failed save.
+- Tests: `test/data/{expense_repository,category_repository,settings_repository,
+  database_constraints,demo_seed}_test.dart` (+ `data_test_helpers.dart`),
+  `test/unit/fake_repositories_test.dart`, `test/widget/settings_demo_button_test.dart`.
+
 ## Decisions made during implementation
 
 - **Derived colours** (not on the design board), all AA-tested: light errorContainer `#FEE4E2` /
@@ -81,6 +111,34 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
 - **`formatGhs` / `splitGhs` assert non-negative.** Differences are shown as an absolute amount
   with words ("less than").
 
+- **`Expense` carries its whole `Category`** (joined in the query), so archived categories still
+  label old expenses without screens watching a second stream.
+- **`update(id, draft)` and `delete(id)` returning the removed `Expense`** for undo; `restore`
+  re-inserts with the original id and timestamps, and a second restore is a no-op.
+- **Restore uses a plain insert after an existence check**, not `INSERT OR IGNORE`, because OR
+  IGNORE also silently skips CHECK violations.
+- **An edit may keep an archived category** the expense already has; moving to an archived one
+  is rejected (`CategoryUnavailableError`).
+- **Lengths counted in code points** (`runes.length`) for notes and category names, matching
+  SQLite's `length()`. A 200-emoji note is valid in both layers.
+- **Duplicate category names checked in Dart too** (`toLowerCase`), because NOCASE folds ASCII
+  only. Lookup, duplicate check and insert run in one transaction.
+- **Creating an archived category's name restores it** with its original icon (ARCHITECTURE §7).
+- **`archive` works on any category, including presets.** `clearAll` leaves presets exactly as they
+  are (archived or not).
+- **Timestamps:** written as `clock().toUtc()`, stored as ISO-8601 text, mapped back with
+  `.toUtc()`. Repositories take injectable `today` / `clock` functions for tests.
+- **Theme mode stored as explicit strings** `system` / `light` / `dark`; unknown or missing is
+  `system`.
+- **ON DELETE RESTRICT reports extended code 1811** (`SQLITE_CONSTRAINT_TRIGGER`), not 787;
+  both are in `SqliteConstraint`.
+- **Errors from `watch` streams are translated too** (`guardDbStream`), so a corrupted stored date
+  reaches the UI as `StorageError`, not a `FormatException`.
+- **Demo seeder** does nothing when any expense exists (so a second tap can't double the data)
+  and returns 0 in release builds. Notes are fictional and brand-free.
+- **Settings uses Flutter's `ThemeMode`** directly in the repository contract rather than a mirror
+  enum.
+
 ## Known issues / follow-ups
 
 - **Recheck the back button once tabs have nested routes.** The `PopScope` in `AppShell` assumes
@@ -88,7 +146,17 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
   must pop that route first, then go to Home, then exit. Add a widget test for that case.
 - Widget tests render with the test font (Ahem), so Plex is only verifiable on a device.
 - **Asserts are debug-only.** `LocalDate(2026, 2, 30)` and `formatGhs(-1)` are caught in
-  debug and tests but not in release. T3 repositories must build `LocalDate`s via `parseIso` (which
-  always checks) or from validated input.
+  debug and tests but not in release. Resolved for stored data in T3: the type converter reads via
+  `parseIso`. Forms must still build `LocalDate`s from the date picker or validated input.
+- **T7: `firstExpenseDate()` is a one-off `Future`.** If the user adds an expense dated before the
+  first record while Reports is open, the trend's start month stays stale until Reports reads it
+  again. Re-read it when the month's data changes, or add a `watch` variant then.
+- **T5: the note and category-name fields must count code points**, not Flutter's default
+  grapheme count for `maxLength`, or some emoji input will pass the form and fail the repository.
+- **`--delete-conflicting-outputs` is ignored** by the installed build_runner (it prints "These
+  options have been removed"). `dart run build_runner build` alone is enough; brief §4 can be
+  updated.
+- **Debug run not yet tapped on a device** by the agent; a debug APK build was used as the Android
+  compile check.
 - **Day labels need a "today" that refreshes.** If the app stays open past midnight, Today and
   Yesterday labels are stale until something rebuilds. Address when the ledger is built (T4).
