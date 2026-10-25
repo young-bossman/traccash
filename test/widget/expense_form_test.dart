@@ -381,6 +381,32 @@ void main() {
       expect(find.byType(ExpenseForm), findsOneWidget);
       expect(tester.getTopLeft(find.byType(ExpenseForm)).dy, 0);
     });
+
+    testWidgets('the date picker fades in', (tester) async {
+      await openAddForm(tester);
+
+      await tapWithoutSettling(tester, find.text('21/10/2026'));
+      expect(pickerOpacity(tester), lessThan(1));
+
+      await tester.pumpAndSettle();
+      expect(pickerOpacity(tester), 1);
+    });
+
+    testWidgets('reduced motion: the date picker opens with no fade', (
+      tester,
+    ) async {
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+      await openAddForm(tester);
+
+      await tapWithoutSettling(tester, find.text('21/10/2026'));
+
+      expect(find.byType(DatePickerDialog), findsOneWidget);
+      expect(pickerOpacity(tester), 1);
+    });
   });
 
   testWidgets(
@@ -414,3 +440,25 @@ void main() {
     },
   );
 }
+
+/// Scrolls [finder] into view and taps it, then draws a single frame, so a
+/// transition it starts can be checked before it finishes.
+Future<void> tapWithoutSettling(WidgetTester tester, Finder finder) async {
+  await tester.ensureVisible(finder);
+  await tester.pumpAndSettle();
+  await tester.tap(finder);
+  await tester.pump();
+}
+
+/// How far the open date picker's dialog has faded in: 1 when fully shown.
+double pickerOpacity(WidgetTester tester) => tester
+    .widget<FadeTransition>(
+      find
+          .ancestor(
+            of: find.byType(DatePickerDialog),
+            matching: find.byType(FadeTransition),
+          )
+          .first,
+    )
+    .opacity
+    .value;

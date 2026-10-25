@@ -17,7 +17,7 @@ Future<bool> confirmDiscard(
 }) async {
   final discard = await showDialog<bool>(
     context: context,
-    animationStyle: _dialogAnimation(context),
+    animationStyle: dialogAnimation(context),
     builder: (context) => AlertDialog(
       title: Text(editing ? 'Discard changes?' : 'Discard this expense?'),
       content: Text(
@@ -51,7 +51,7 @@ Future<bool> confirmDelete(
   final date = formatDayAndMonth(expense.occurredOn, today: today);
   final delete = await showDialog<bool>(
     context: context,
-    animationStyle: _dialogAnimation(context),
+    animationStyle: dialogAnimation(context),
     builder: (context) => AlertDialog(
       title: const Text('Delete this expense?'),
       content: Text(
@@ -73,7 +73,9 @@ Future<bool> confirmDelete(
   return delete ?? false;
 }
 
-AnimationStyle? _dialogAnimation(BuildContext context) =>
+/// No fade under reduced motion; Flutter's default otherwise. For every
+/// dialog the form opens, the date picker included.
+AnimationStyle? dialogAnimation(BuildContext context) =>
     MediaQuery.disableAnimationsOf(context) ? AnimationStyle.noAnimation : null;
 
 // The snackbars below are shown after the form has closed, so they take the

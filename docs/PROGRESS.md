@@ -123,7 +123,8 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
   `amount_field.dart` (`AmountField`), `expense_form_fields.dart` (`ExpenseDateField`, `NoteField`,
   `SaveBar`, `SaveErrorBanner`), `expense_category_field.dart` (`ExpenseCategoryField`),
   `expense_form_dialogs.dart` (`confirmDiscard`, `confirmDelete`, `showSavedSnackBar`,
-  `showDeletedSnackBar`, `snackBarActionWindow`), `expenses_providers.dart` (+ `expenseByIdProvider`).
+  `showDeletedSnackBar`, `snackBarActionWindow`, `dialogAnimation`), `expenses_providers.dart`
+  (+ `expenseByIdProvider`).
 - `lib/features/categories/presentation/`: `category_picker.dart` (`CategoryPicker`,
   `OptionSurface`, dashed "New category" option), `new_category_panel.dart` (`NewCategoryPanel`),
   `category_icons.dart` (+ `userIconLabel`).
@@ -146,6 +147,10 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
   `new_category_panel_test.dart`, helpers `form_test_helpers.dart`;
   `test/unit/expense_form_validation_test.dart`, `rune_length_limit_test.dart`; new cases in
   `money_test.dart`, `dates_test.dart`, `expenses_state_test.dart`. No T4 test needed changing.
+- Follow-up after review: the date field opens `DatePickerDialog` through `showDialog` with
+  `dialogAnimation` (no fade under reduced motion), replacing `showDatePicker`. Same range and
+  initial-date clamp. Tests "the date picker fades in" and "reduced motion: the date picker opens
+  with no fade" in `expense_form_test.dart`.
 
 ## Decisions made during implementation
 
@@ -277,6 +282,11 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
   underline: an `InputDecoration` prefix is hidden while the field is empty and unfocused.
 - **Field labels and their fields are merged for screen readers** (`MergeSemantics`), so the
   amount field reads as "Amount" rather than its hint.
+- **The date picker is `showDialog` + `DatePickerDialog`**, because `showDatePicker` takes no
+  animation setting. Every form motion (route, dialogs, date picker, snackbars, scrolling to an
+  error) is now skipped under reduced motion. See DECISIONS.md.
+- **An edit says "Changes saved"** ("Changes saved to September 2026" with View); adding says
+  "Expense saved". Deviates from the card. See DECISIONS.md.
 
 ## Known issues / follow-ups
 
@@ -316,8 +326,6 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
 - **T6:** Home's comparison label ("1–21 Sep") must use `shortMonthName`, not a `DateFormat`.
 - **T6:** add Home to the tabs that show the Add expense button in `AppShell`
   (`navigationShell.currentIndex == _expensesIndex` today).
-- **`showDatePicker` has no animation setting**, so its short fade stays on under reduced motion.
-  Every other form motion (route, dialogs, snackbars, scrolling to an error) is skipped.
 - **A category created in the panel stays** if the expense is then discarded (§5b creates it on
   Add).
 - **The rune limit cuts from the end, like Flutter's `maxLength`:** pasting into the middle of an

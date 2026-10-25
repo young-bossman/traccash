@@ -5,6 +5,7 @@ import 'package:traccash/app/theme/app_typography.dart';
 import 'package:traccash/core/errors/app_error.dart';
 import 'package:traccash/core/formatting/dates.dart';
 import 'package:traccash/features/expenses/domain/expense_validation.dart';
+import 'package:traccash/features/expenses/presentation/expense_form_dialogs.dart';
 import 'package:traccash/shared/rune_length_limit.dart';
 import 'package:traccash/shared/widgets/form_field_text.dart';
 
@@ -32,11 +33,16 @@ class ExpenseDateField extends StatelessWidget {
         : date.compareTo(earliestExpenseDate) < 0
         ? earliestExpenseDate
         : date;
-    final picked = await showDatePicker(
+    // The dialog showDatePicker builds, opened directly: showDatePicker takes
+    // no animation setting, so its fade would ignore reduced motion.
+    final picked = await showDialog<DateTime>(
       context: context,
-      initialDate: initial.toLocalDateTime(),
-      firstDate: earliestExpenseDate.toLocalDateTime(),
-      lastDate: today.toLocalDateTime(),
+      animationStyle: dialogAnimation(context),
+      builder: (context) => DatePickerDialog(
+        initialDate: initial.toLocalDateTime(),
+        firstDate: earliestExpenseDate.toLocalDateTime(),
+        lastDate: today.toLocalDateTime(),
+      ),
     );
     if (picked != null && context.mounted) {
       onChanged(LocalDate.fromDateTime(picked));

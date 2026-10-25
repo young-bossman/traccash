@@ -162,3 +162,15 @@ height and grow with the text. Fine for the handful of categories a user has.
 **2026-10-25 · Action snackbars stay up for screen readers** — Undo and View time out after 5 s,
 but with TalkBack on (`MediaQuery.accessibleNavigationOf`) they stay until dismissed or actioned,
 since reaching the action by swiping can take longer than 5 s.
+
+**2026-10-25 · Date picker opened through `showDialog`** — Reduced motion must skip fades
+(DESIGN_SPEC §7), but `showDatePicker` (Flutter 3.47.7) passes no animation setting to its dialog,
+so the picker faded in regardless. The date field shows the same `DatePickerDialog` through
+`showDialog`, with the delete and discard dialogs' setting (`dialogAnimation`: no animation under
+reduced motion). Range, initial-date clamp and en_GB format are unchanged. Cost: defaults that
+`showDatePicker` adds in a future Flutter release won't reach this field automatically.
+
+**2026-10-25 · "Changes saved" after an edit** — The T5 card and DESIGN_SPEC §7 say "Expense
+saved". After an edit the snackbar reads "Changes saved" ("Changes saved to September 2026" with
+View), wording from the prototype, which says the edit was stored rather than a new expense.
+Adding still says "Expense saved". A deliberate deviation from the card.
