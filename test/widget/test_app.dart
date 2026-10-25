@@ -24,7 +24,10 @@ abstract final class PresetIds {
   static const int transport = 2;
   static const int bills = 3;
   static const int dataAirtime = 4;
+  static const int shopping = 5;
   static const int health = 6;
+  static const int entertainment = 7;
+  static const int other = 8;
 }
 
 /// The fakes behind a pumped app, for seeding and inspecting data.

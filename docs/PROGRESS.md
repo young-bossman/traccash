@@ -9,7 +9,7 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
 - [x] T3 · Data layer: models, database, repositories, demo seeder
 - [x] T4 · Expenses page
 - [x] T5 · Add / edit expense page
-- [ ] T6 · Home page
+- [x] T6 · Home page
 - [ ] T7 · Reports page
 - [ ] T8 · Settings page
 - [ ] T9 · Hardening
@@ -152,6 +152,41 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
   initial-date clamp. Tests "the date picker fades in" and "reduced motion: the date picker opens
   with no fade" in `expense_form_test.dart`.
 
+### T6 · Home page (2026-10-25)
+
+- `lib/core/calculations/breakdown.dart`: `CategoryTotal`, `categoryTotals` (largest first, ties in
+  display order), `shareTenths` (largest-remainder tenths of a percent, always 1000),
+  `BreakdownSlice`, `breakdownSlices` (top 3 named, the rest grouped; exactly 4 are all named),
+  `largestCategories` (every category tied for the top).
+- `lib/core/calculations/comparison.dart`: `DateRange`, `comparisonRange` (same days of the
+  previous month for the current month, capped at that month's length; the whole previous month
+  for a past month), `SpendingChange`, `Comparison`, `compareTotals` (null when either side is 0).
+- `lib/core/formatting/percent.dart`: `formatShare` (`33.2%`). `dates.dart`: `formatDayRange`
+  (`1–21 Sep`, `1 Sep`), `shortDayLabel` (`Today` / `Yesterday` / `19 Oct`).
+- `lib/features/home/presentation/`: `home_providers.dart` (`comparisonRangeProvider`,
+  `previousPeriodTotalProvider`, `HomeView` with `HomeView.of` deriving every figure and string,
+  `homeViewProvider`), `home_screen.dart` (rewritten: header, month row, loading / error /
+  first use / empty month / data), `home_total.dart`, `home_breakdown.dart`, `home_recent.dart`,
+  `home_section.dart` (`HomeSectionHeading`, `HomeCard`).
+- Moved `ExpenseTile` to `lib/shared/widgets/expense_tile.dart` (Home and Expenses both use it),
+  with an optional `dateLabel` after the note ("Waakye and egg, lunch · Today"). Its padding and
+  gap are named constants that both the stacking rule and the divider inset use.
+- `lib/shared/text_measure.dart`: `singleLineWidth`, `scaledMinTextWidth` (moved out of
+  `ExpenseTile`; the legend rows use the same 96dp rule).
+- `lib/shared/widgets/empty_state.dart`: `FirstUseState`, `EmptyMonthState`, `LoadErrorState`, so
+  Home and Expenses word them alike; `expenses_screen.dart` uses them.
+- `lib/shared/widgets/month_switcher.dart`: `MonthSwitcher.spread()` (full label at the start,
+  arrows at the end).
+- `lib/app/app_shell.dart`: the Add expense button shows on Home too.
+- `expenses_providers.dart`: `_noRetry` is now the public `noRetry`, shared with Home.
+- Theme: `AppTypography.totalMinor`; `AppSizes.logoTile`, `logoGlyph`, `breakdownBarHeight`,
+  `breakdownBarGap`, `legendSwatch`; `AppRadius.swatch`.
+- Tests: `test/unit/breakdown_test.dart`, `comparison_test.dart`, `percent_test.dart`,
+  `home_state_test.dart`, new cases in `dates_test.dart`; `test/widget/home_screen_test.dart`,
+  `home_layout_test.dart` (Plex), date-subtitle cases in `expense_tile_test.dart`. Helpers
+  `test/widget/home_seed.dart` (the 01 month), `plex_font.dart` (shared `loadPlex`); `PresetIds`
+  gains shopping, entertainment, other.
+
 ## Decisions made during implementation
 
 - **Derived colours** (not on the design board), all AA-tested: light errorContainer `#FEE4E2` /
@@ -288,6 +323,38 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
 - **An edit says "Changes saved"** ("Changes saved to September 2026" with View); adding says
   "Expense saved". Deviates from the card. See DECISIONS.md.
 
+- **Home reuses Expenses' `monthExpensesProvider`**, so both tabs total the same list for the same
+  month and can't disagree.
+- **Recent is the selected month's 5 latest**, with the date after the note (`Today`,
+  `Yesterday`, `19 Oct`). See DECISIONS.md.
+- **With exactly 4 categories the fourth is named**; 5 or more group from the fourth. Beyond the
+  spec. See DECISIONS.md.
+- **Shares are rounded across all categories**; the grouped row's share is the sum of its
+  members'. A test checks each named share equals `shareTenths` over all categories, the value
+  T7's table will use. See DECISIONS.md.
+- **A tie for the largest share names every tied category with the amount**, not a percentage.
+  See DECISIONS.md.
+- **The compare line's current side is the headline total**, so the difference always reconciles
+  with the big number. Past months use "1–31 Aug" for the whole previous month.
+- **Only the month stream's failure is an error.** If just the earlier period fails, the compare
+  line is hidden and the rest shows. See DECISIONS.md.
+- **Loading waits for the comparison too**, so the line never pops in a moment after the total.
+- **The total's Semantics label is the whole amount** (`GH₵ 2,313.90`), even when the figure is
+  scaled down to fit.
+- **The bar is shapes only** (`Row` of `Expanded(flex: pesewas)`), with a text summary for screen
+  readers; the legend names and sizes every slice. A fourth named category uses c4.
+- **Legend shares sit in a column as wide as "100.0%"**, so amounts line up. When the figures
+  would leave a name under 96dp (scaled), they move under the name.
+- **Section headings use a `Wrap` with a fixed width** (the stretched column), so the link sits at
+  the end and wraps under the title at large text.
+- Copy not found in DESIGN_SPEC or the screenshots (my wording unless noted): "Spent in September
+  2026"; "GH₵ X more than 1–21 Sep"; "Same as 1–21 Sep"; "1–31 Aug" for past months (format chosen
+  by Bossman); "Bills is the largest share of September 2026, at 33.2%."; "Food and Transport share
+  the largest amount, GH₵ 50.00 each." ("Food and Transport share…" from Bossman, the rest mine);
+  "Food is all of this month’s spending."; "19 Oct" after a note in Recent; the bar's summary
+  "Bills 33.2%, Shopping 25.0%, …". Reused from T4: "No expenses in October 2026", "Nothing was
+  recorded for this month.", "Couldn’t load expenses", "Try again", "Loading expenses".
+
 ## Known issues / follow-ups
 
 - **Recheck the back button once tabs have nested routes.** The `PopScope` in `AppShell` assumes
@@ -315,17 +382,16 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
   injectable clock.
 - ~~T5: the edit placeholder accepts any numeric id~~: resolved in T5. A missing id shows "This
   expense no longer exists."; deleted while open, Save shows that message in the banner.
-- **T6:** Home's month row (03) puts the full label left and the arrows right; `MonthSwitcher`
-  only has the compact Expenses layout so far.
+- ~~T6: Home's month row needs the full label left and the arrows right~~: resolved in T6 by
+  `MonthSwitcher.spread()`.
 - **A month change shows the ledger spinner briefly** (milliseconds on a local database), by
   design: the old month's rows are never shown under the new label.
 - **Search has no accent folding:** "ecole" does not find "École".
 - **Screen-level overflow tests run in Ahem**, which is wider than Plex, so they are stricter
   than a device. Tile layout positions are tested in Plex. Still check 320dp and large text on the
   emulator.
-- **T6:** Home's comparison label ("1–21 Sep") must use `shortMonthName`, not a `DateFormat`.
-- **T6:** add Home to the tabs that show the Add expense button in `AppShell`
-  (`navigationShell.currentIndex == _expensesIndex` today).
+- ~~T6: Home's comparison label must use `shortMonthName`~~: resolved in T6 by `formatDayRange`.
+- ~~T6: add Home to the tabs that show the Add expense button~~: resolved in T6.
 - **A category created in the panel stays** if the expense is then discarded (§5b creates it on
   Add).
 - **The rune limit cuts from the end, like Flutter's `maxLength`:** pasting into the middle of an
@@ -336,3 +402,17 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
 - **A very large amount at large text scrolls sideways** inside the amount field rather than
   shrinking.
 - **Not yet tapped on a device by the agent**: checked with widget tests and a debug APK build.
+- **Found in T6, not fixed (T4 code): the Expenses month switcher isn't at the right edge.** In
+  Plex at 412dp it sits right after the title (x 118–285, not ending at 392 as in 04). The
+  header's `Wrap(alignment: spaceBetween)` is in a `Column(crossAxisAlignment: start)`, and a
+  `Wrap` only spreads its children when its width is fixed. One-line fix: give that `Wrap` the full
+  width (for example `SizedBox(width: double.infinity, child: Wrap(...))`).
+- **Home's compare line has no retry of its own.** If only the earlier period fails, the line stays
+  hidden until the month or day changes (decided: hide rather than show an error).
+- **"Reports" and "View all" text sits a button's padding in from the gutter** (the button's right
+  edge is on the gutter); the design puts the text itself on the gutter.
+- **Breakdown bar colours are decorative, not AA graphics:** light c3 (`#A3D7C5`) on the
+  background is well under 3:1. Every slice is named with its amount and share in the legend and
+  in the bar's Semantics summary, so nothing depends on the colour.
+- **View all keeps any active Expenses filter** (decided); the chip on Expenses shows it.
+- **Home not yet tapped on a device by the agent**: checked with widget tests (Ahem and Plex).

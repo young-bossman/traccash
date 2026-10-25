@@ -7,8 +7,8 @@ import 'package:traccash/app/theme/app_typography.dart';
 import 'package:traccash/core/calculations/ledger.dart';
 import 'package:traccash/core/formatting/dates.dart';
 import 'package:traccash/core/formatting/money.dart';
-import 'package:traccash/features/expenses/presentation/expense_tile.dart';
 import 'package:traccash/shared/selected_month.dart';
+import 'package:traccash/shared/widgets/expense_tile.dart';
 
 /// The month's expenses grouped by day, each day's header pinned while its
 /// rows scroll beneath it.

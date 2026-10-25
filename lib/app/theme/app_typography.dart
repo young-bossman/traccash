@@ -22,6 +22,17 @@ abstract final class AppTypography {
     fontFeatures: tabularFigures,
   );
 
+  /// The "GH₵" and pesewas beside the monthly total's cedis, which are
+  /// displaySmall. Not on the design board's ramp: sized from 01-home.
+  static const TextStyle totalMinor = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 24,
+    height: 32 / 24,
+    fontWeight: FontWeight.w500,
+    letterSpacing: 0,
+    fontFeatures: tabularFigures,
+  );
+
   /// Screen titles.
   static const TextStyle titleLarge = TextStyle(
     fontFamily: fontFamily,

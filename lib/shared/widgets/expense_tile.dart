@@ -5,6 +5,7 @@ import 'package:traccash/app/theme/app_typography.dart';
 import 'package:traccash/core/formatting/money.dart';
 import 'package:traccash/features/categories/presentation/category_icons.dart';
 import 'package:traccash/features/expenses/domain/expense.dart';
+import 'package:traccash/shared/text_measure.dart';
 
 /// One ledger row: category icon, category name, note, amount.
 ///
@@ -15,6 +16,7 @@ class ExpenseTile extends StatelessWidget {
   const ExpenseTile({
     required this.expense,
     required this.onTap,
+    this.dateLabel,
     this.showDivider = false,
     super.key,
   });
@@ -22,12 +24,21 @@ class ExpenseTile extends StatelessWidget {
   final Expense expense;
   final VoidCallback onTap;
 
+  /// Follows the note ("Waakye and egg, lunch · Today") where no day header
+  /// says when, as in Home's Recent list.
+  final String? dateLabel;
+
   /// Draws the inset divider under this row; off for the last row of a day.
   final bool showDivider;
 
+  static const double _sidePadding = AppSpacing.s20;
+
+  /// Between the icon tile and the text, and between the text and the
+  /// amount.
+  static const double _gap = AppSpacing.s12;
+
   /// Where the text column starts, so dividers line up with it.
-  static const double textInset =
-      AppSpacing.s20 + AppSizes.iconTile + AppSpacing.s12;
+  static const double textInset = _sidePadding + AppSizes.iconTile + _gap;
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +46,7 @@ class ExpenseTile extends StatelessWidget {
     final scheme = theme.colorScheme;
     final amountStyle = AppTypography.amount.copyWith(color: scheme.onSurface);
     final amount = formatGhs(expense.amountPesewas);
-    final note = expense.note;
+    final subtitle = [?expense.note, ?dateLabel].join(' · ');
 
     final categoryAndNote = [
       Text(
@@ -44,9 +55,9 @@ class ExpenseTile extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      if (note != null)
+      if (subtitle.isNotEmpty)
         Text(
-          note,
+          subtitle,
           style: theme.textTheme.bodySmall?.copyWith(
             color: scheme.onSurfaceVariant,
           ),
@@ -69,22 +80,22 @@ class ExpenseTile extends StatelessWidget {
                 ),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.s20,
+                    horizontal: _sidePadding,
                     vertical: AppSpacing.s12,
                   ),
+                  // Inside the padding, so the width is what this row really
+                  // has, wherever it is placed.
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       final textColumn =
-                          constraints.maxWidth -
-                          AppSizes.iconTile -
-                          AppSpacing.s12;
+                          constraints.maxWidth - AppSizes.iconTile - _gap;
                       final stacked =
-                          _textWidth(context, amount, amountStyle) >
-                          textColumn - AppSpacing.s12 - _minTextWidth(context);
+                          singleLineWidth(context, amount, amountStyle) >
+                          textColumn - _gap - scaledMinTextWidth(context);
                       return Row(
                         children: [
                           _IconTile(categoryIcon(expense.category.iconKey)),
-                          const SizedBox(width: AppSpacing.s12),
+                          const SizedBox(width: _gap),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -103,7 +114,7 @@ class ExpenseTile extends StatelessWidget {
                             ),
                           ),
                           if (!stacked) ...[
-                            const SizedBox(width: AppSpacing.s12),
+                            const SizedBox(width: _gap),
                             Text(amount, style: amountStyle, softWrap: false),
                           ],
                         ],
@@ -118,28 +129,6 @@ class ExpenseTile extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  /// [AppSizes.ledgerMinTextWidth] grown with the user's text size. The
-  /// factor is read at the row title's font size: Android 14+ scales large
-  /// font sizes less than small ones, so passing 96 to the scaler as if it
-  /// were a font size would understate it.
-  static double _minTextWidth(BuildContext context) {
-    final fontSize = AppTypography.bodyLarge.fontSize!;
-    final factor = MediaQuery.textScalerOf(context).scale(fontSize) / fontSize;
-    return AppSizes.ledgerMinTextWidth * factor;
-  }
-
-  static double _textWidth(BuildContext context, String text, TextStyle style) {
-    final painter = TextPainter(
-      text: TextSpan(text: text, style: style),
-      textDirection: Directionality.of(context),
-      textScaler: MediaQuery.textScalerOf(context),
-      maxLines: 1,
-    )..layout();
-    final width = painter.width;
-    painter.dispose();
-    return width;
   }
 }
 

@@ -332,6 +332,51 @@ void main() {
       );
     });
 
+    test('a day range reads 1–21 Sep, with the short month name', () {
+      expect(
+        formatDayRange(LocalDate(2026, 9, 1), LocalDate(2026, 9, 21)),
+        '1–21 Sep',
+      );
+      expect(
+        formatDayRange(LocalDate(2026, 8, 1), LocalDate(2026, 8, 31)),
+        '1–31 Aug',
+      );
+      expect(
+        formatDayRange(LocalDate(2028, 2, 1), LocalDate(2028, 2, 29)),
+        '1–29 Feb',
+      );
+    });
+
+    test('a range of one day names the day once', () {
+      expect(
+        formatDayRange(LocalDate(2026, 9, 1), LocalDate(2026, 9, 1)),
+        '1 Sep',
+      );
+    });
+
+    test('a day range asserts that it stays inside one month', () {
+      expect(
+        () => formatDayRange(LocalDate(2026, 9, 21), LocalDate(2026, 9, 1)),
+        throwsAssertionError,
+      );
+      expect(
+        () => formatDayRange(LocalDate(2026, 9, 30), LocalDate(2026, 10, 1)),
+        throwsAssertionError,
+      );
+    });
+
+    test('short day label says Today, Yesterday or 19 Oct', () {
+      final today = LocalDate(2026, 10, 21);
+      expect(shortDayLabel(today, today: today), 'Today');
+      expect(shortDayLabel(LocalDate(2026, 10, 20), today: today), 'Yesterday');
+      expect(shortDayLabel(LocalDate(2026, 10, 19), today: today), '19 Oct');
+      expect(shortDayLabel(LocalDate(2026, 9, 1), today: today), '1 Sep');
+      expect(
+        shortDayLabel(LocalDate(2026, 12, 31), today: LocalDate(2027, 1, 1)),
+        'Yesterday',
+      );
+    });
+
     test('date field helper says Today, Yesterday or the long date', () {
       final today = LocalDate(2026, 10, 21);
       expect(

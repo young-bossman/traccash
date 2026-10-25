@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:traccash/app/router.dart';
 import 'package:traccash/app/theme/app_spacing.dart';
-import 'package:traccash/core/errors/app_error.dart';
 import 'package:traccash/features/expenses/presentation/expense_ledger.dart';
 import 'package:traccash/features/expenses/presentation/expenses_header.dart';
 import 'package:traccash/features/expenses/presentation/expenses_providers.dart';
@@ -78,21 +75,14 @@ class _LedgerArea extends ConsumerWidget {
     return switch (view) {
       AsyncData(:final value) => _forView(context, value),
       AsyncError(:final error) => _Scrollable(
-        child: EmptyState(
-          icon: Icons.error_outline,
-          title: 'Couldn’t load expenses',
-          message: error is AppError
-              ? error.message
-              : const StorageError().message,
-          action: FilledButton.tonal(
-            onPressed: () {
-              ref
-                ..invalidate(monthExpensesProvider)
-                ..invalidate(hasAnyExpensesProvider)
-                ..invalidate(allCategoriesProvider);
-            },
-            child: const Text('Try again'),
-          ),
+        child: LoadErrorState(
+          error: error,
+          onRetry: () {
+            ref
+              ..invalidate(monthExpensesProvider)
+              ..invalidate(hasAnyExpensesProvider)
+              ..invalidate(allCategoriesProvider);
+          },
         ),
       ),
       _ => const Center(
@@ -103,29 +93,10 @@ class _LedgerArea extends ConsumerWidget {
 
   Widget _forView(BuildContext context, ExpensesView view) {
     if (!view.hasAnyExpenses) {
-      return _Scrollable(
-        child: EmptyState(
-          icon: Icons.receipt_long_outlined,
-          title: 'No expenses yet',
-          message:
-              'Add what you spend and TracCash will total it by month and '
-              'category. Your records stay on this device.',
-          action: FilledButton.tonalIcon(
-            onPressed: () => context.push(AppRoutes.addExpense),
-            icon: const Icon(Icons.add),
-            label: const Text('Add expense'),
-          ),
-        ),
-      );
+      return const _Scrollable(child: FirstUseState());
     }
     if (view.monthCount == 0) {
-      return _Scrollable(
-        child: EmptyState(
-          icon: Icons.calendar_month_outlined,
-          title: 'No expenses in ${view.month.label}',
-          message: 'Nothing was recorded for this month.',
-        ),
-      );
+      return _Scrollable(child: EmptyMonthState(month: view.month));
     }
     if (view.shownCount == 0) {
       return _Scrollable(

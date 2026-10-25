@@ -11,10 +11,10 @@ import 'package:traccash/features/expenses/data/expense_repository.dart';
 import 'package:traccash/features/expenses/domain/expense.dart';
 import 'package:traccash/shared/selected_month.dart';
 
-// Riverpod retries failed providers by default. A storage error here is a
-// corrupted row or an unreadable file, which retrying won't fix; the screen
-// offers "Try again" instead.
-Duration? _noRetry(int retryCount, Object error) => null;
+/// Riverpod retries failed providers by default. A storage error is a
+/// corrupted row or an unreadable file, which retrying won't fix; screens
+/// offer "Try again" instead.
+Duration? noRetry(int retryCount, Object error) => null;
 
 /// The selected month's expenses, newest first.
 final StreamProvider<List<Expense>> monthExpensesProvider =
@@ -22,7 +22,7 @@ final StreamProvider<List<Expense>> monthExpensesProvider =
       (ref) => ref
           .watch(expenseRepositoryProvider)
           .watchMonth(ref.watch(selectedMonthProvider)),
-      retry: _noRetry,
+      retry: noRetry,
     );
 
 /// False until the first expense is saved, in any month.
@@ -31,14 +31,14 @@ final StreamProvider<bool> hasAnyExpensesProvider = StreamProvider<bool>(
       .watch(expenseRepositoryProvider)
       .watchRecent(limit: 1)
       .map((recent) => recent.isNotEmpty),
-  retry: _noRetry,
+  retry: noRetry,
 );
 
 /// Every category including archived ones, for the filter sheet.
 final StreamProvider<List<Category>> allCategoriesProvider =
     StreamProvider<List<Category>>(
       (ref) => ref.watch(categoryRepositoryProvider).watchAll(),
-      retry: _noRetry,
+      retry: noRetry,
     );
 
 /// One stored expense for the edit form; null when no expense has the id
@@ -47,7 +47,7 @@ final FutureProviderFamily<Expense?, int> expenseByIdProvider = FutureProvider
     .autoDispose
     .family<Expense?, int>(
       (ref, id) => ref.watch(expenseRepositoryProvider).getById(id),
-      retry: _noRetry,
+      retry: noRetry,
     );
 
 /// The category the ledger is narrowed to, or null for all categories.

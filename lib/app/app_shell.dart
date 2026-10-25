@@ -23,6 +23,7 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final onHome = navigationShell.currentIndex == _homeIndex;
+    final showAdd = onHome || navigationShell.currentIndex == _expensesIndex;
 
     // Android back from another tab returns to Home instead of closing the
     // app; only back on Home exits. Tabs have no nested routes yet, so this
@@ -36,7 +37,7 @@ class AppShell extends StatelessWidget {
         body: navigationShell,
         // Here rather than on a tab's own Scaffold: snackbars appear in this
         // outermost Scaffold, which lifts its own button above them.
-        floatingActionButton: navigationShell.currentIndex == _expensesIndex
+        floatingActionButton: showAdd
             ? FloatingActionButton.extended(
                 onPressed: () => context.push(AppRoutes.addExpense),
                 icon: const Icon(Icons.add),

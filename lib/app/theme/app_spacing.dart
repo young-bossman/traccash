@@ -29,6 +29,10 @@ abstract final class AppSpacing {
 
 /// Corner radii from DESIGN_SPEC §3.
 abstract final class AppRadius {
+  /// Breakdown legend swatches; too small for r8, and not on the design
+  /// board's scale.
+  static const Radius swatch = Radius.circular(2);
+
   /// Fields, chips, snackbar.
   static const Radius r8 = Radius.circular(8);
 
@@ -60,6 +64,20 @@ abstract final class AppSizes {
   /// Narrowest the category and note may get beside a ledger amount (at text
   /// scale 1.0) before the amount moves to its own line.
   static const double ledgerMinTextWidth = 96;
+
+  /// The app mark beside "TracCash" on Home.
+  static const double logoTile = 28;
+
+  static const double logoGlyph = 18;
+
+  /// Home's category breakdown bar.
+  static const double breakdownBarHeight = 8;
+
+  /// Between the bar's segments.
+  static const double breakdownBarGap = 2;
+
+  /// Colour square at the start of a breakdown legend row.
+  static const double legendSwatch = 10;
 
   /// Icon square at the top of an empty state.
   static const double emptyStateTile = 56;

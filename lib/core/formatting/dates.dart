@@ -196,6 +196,26 @@ String formatDayAndMonth(LocalDate date, {required LocalDate today}) =>
     ? _dayAndMonth.format(date._asDateTime)
     : _dayMonthYear.format(date._asDateTime);
 
+/// `1–21 Sep`, or `1 Sep` for a single day: days inside one month, for
+/// Home's comparison line.
+String formatDayRange(LocalDate from, LocalDate to) {
+  assert(
+    from.year == to.year && from.month == to.month && from.compareTo(to) <= 0,
+    'A day range runs forwards inside one month',
+  );
+  final month = shortMonthName(from.month);
+  return from == to ? '${from.day} $month' : '${from.day}–${to.day} $month';
+}
+
+/// `Today`, `Yesterday` or `19 Oct`: the date beside a note in a list with
+/// no day headers, such as Home's Recent. No year, because the screen
+/// already names the month.
+String shortDayLabel(LocalDate date, {required LocalDate today}) {
+  if (date == today) return 'Today';
+  if (date == today.addDays(-1)) return 'Yesterday';
+  return '${date.day} ${shortMonthName(date.month)}';
+}
+
 /// Helper text under the form's date field:
 /// `Today · Wednesday, 21 October 2026`, `Yesterday · …`, or the long date.
 String dateFieldHelper(LocalDate date, {required LocalDate today}) {

@@ -9,9 +9,9 @@ import 'package:traccash/core/errors/app_error.dart';
 import 'package:traccash/core/formatting/dates.dart';
 import 'package:traccash/features/expenses/domain/expense.dart';
 import 'package:traccash/features/expenses/presentation/expense_form_screen.dart';
-import 'package:traccash/features/expenses/presentation/expense_tile.dart';
 import 'package:traccash/features/expenses/presentation/expenses_header.dart';
 import 'package:traccash/features/expenses/presentation/expenses_screen.dart';
+import 'package:traccash/shared/widgets/expense_tile.dart';
 
 import '../fakes/fake_category_repository.dart';
 import '../fakes/fake_expense_repository.dart';

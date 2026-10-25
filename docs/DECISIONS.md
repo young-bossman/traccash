@@ -174,3 +174,29 @@ reduced motion). Range, initial-date clamp and en_GB format are unchanged. Cost:
 saved". After an edit the snackbar reads "Changes saved" ("Changes saved to September 2026" with
 View), wording from the prototype, which says the edit was stored rather than a new expense.
 Adding still says "Expense saved". A deliberate deviation from the card.
+
+**2026-10-25 · Home names a fourth category instead of "1 other category"** — DESIGN_SPEC §4 says
+top 3 categories plus "N other categories". With exactly 4 categories that would be a row reading
+"1 other category" that hides a name and saves no space, so the fourth is named (in the c4
+colour). Five or more still group from the fourth on. Goes beyond the spec; decided by Bossman.
+
+**2026-10-25 · Shares rounded across all categories** — Largest-remainder rounding gives slightly
+different tenths depending on which amounts are rounded together. Home rounds every category
+together and makes "N other categories" the sum of its members' rounded shares, so a category
+reads the same on Home as in Reports' full table, and Home's legend still totals 100.0%. Cost:
+the grouped row can differ from its own exact share by up to a few tenths.
+
+**2026-10-25 · Ties in the breakdown sentence use the amount** — Rounding to exactly 100.0% gives
+equal amounts different shares (33.4%, 33.3%, 33.3%), so "Food is the largest share, at 33.4%"
+would be false. When categories tie for the largest total the sentence names them all with the
+shared amount: "Food and Transport share the largest amount, GH₵ 50.00 each."
+
+**2026-10-25 · Home's comparison hides itself when the earlier period fails** — The comparison is
+a second stream (`watchBetween` over the compared days). If only that stream fails, Home leaves
+the line out and shows everything else; only a failure of the month's own stream shows the error
+state. Decided by Bossman. Cost: there is no retry for the line alone; it reads again when the
+month or the day changes, or after Try again on a month failure.
+
+**2026-10-25 · Recent follows the selected month** — Home's Recent list is the selected month's 5
+latest expenses (the start of the same list Expenses shows), not the latest 5 overall, so every
+section on Home and View all describe one month. It needs no extra stream.
