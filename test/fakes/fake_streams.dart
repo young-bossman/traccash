@@ -10,9 +10,15 @@ Stream<T> watchValue<T>(Stream<void> changes, T Function() read) {
       controller.add(read());
       subscription = changes.listen((_) => controller.add(read()));
     },
-    onCancel: () async {
-      await subscription?.cancel();
-      await controller.close();
+    onCancel: () {
+      // Neither is awaited: both return Dart's shared completed future, which
+      // belongs to the root zone. Awaiting it would resume a widget test
+      // outside its fake async zone, where the test then waits forever.
+      unawaited(subscription?.cancel());
+      unawaited(controller.close());
+      // A future of the caller's zone, so `await subscription.cancel()` in a
+      // widget test stays inside it too.
+      return Future<void>.value();
     },
   );
   return controller.stream;

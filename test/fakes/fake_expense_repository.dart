@@ -43,9 +43,13 @@ class FakeExpenseRepository implements ExpenseRepository {
   int addCalls = 0;
   int updateCalls = 0;
 
-  Future<void> dispose() async {
-    await _categorySubscription.cancel();
-    await _changes.close();
+  Future<void> dispose() {
+    // Not awaited, as in watchValue: the cancel returns Dart's shared
+    // completed future, which belongs to the root zone and would resume a
+    // widget test outside its fake async zone. close() completes in the
+    // caller's zone.
+    unawaited(_categorySubscription.cancel());
+    return _changes.close();
   }
 
   void _notify() => _changes.add(null);

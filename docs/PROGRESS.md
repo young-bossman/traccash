@@ -494,7 +494,7 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
   both update, but not in the same frame, so for a few milliseconds they can differ.
 - **Monthly x labels have no year** ("Dec", "Jan", "Feb" across a year boundary); the screen reader
   summary adds years in that case.
-- **`watchValue` in `test/fakes/fake_streams.dart` never completes `.first`**: its `onCancel`
-  awaits `controller.close()`, whose future only completes after `onCancel` returns. Riverpod never
-  awaits a cancel, so the app is unaffected; tests read through providers instead. Not fixed in
-  T7 because `test/fakes/` was to stay unchanged.
+- ~~`watchValue` hung widget tests that awaited `.first`~~: fixed after T7, along with
+  `FakeExpenseRepository.dispose()`. Both awaited Dart's root-zone completed future, which resumed
+  the test outside its fake async zone (T7's note blamed `close()`; that was wrong). Covered by
+  `fake_repositories_test.dart`.
