@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:traccash/app/app_shell.dart';
+import 'package:traccash/app/theme/app_motion.dart';
 import 'package:traccash/features/expenses/presentation/expense_form_screen.dart';
 import 'package:traccash/features/expenses/presentation/expenses_screen.dart';
 import 'package:traccash/features/home/presentation/home_screen.dart';
@@ -70,11 +71,8 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((ref) {
       // listed first so it isn't read as an id.
       GoRoute(
         path: AppRoutes.addExpense,
-        pageBuilder: (context, state) => MaterialPage<void>(
-          key: state.pageKey,
-          fullscreenDialog: true,
-          child: const ExpenseFormScreen(),
-        ),
+        pageBuilder: (context, state) =>
+            _formPage(context, state, const ExpenseFormScreen()),
       ),
       GoRoute(
         path: '/expense/:id',
@@ -82,12 +80,10 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((ref) {
             int.tryParse(state.pathParameters['id']!) == null
             ? AppRoutes.expenses
             : null,
-        pageBuilder: (context, state) => MaterialPage<void>(
-          key: state.pageKey,
-          fullscreenDialog: true,
-          child: ExpenseFormScreen(
-            expenseId: int.parse(state.pathParameters['id']!),
-          ),
+        pageBuilder: (context, state) => _formPage(
+          context,
+          state,
+          ExpenseFormScreen(expenseId: int.parse(state.pathParameters['id']!)),
         ),
       ),
     ],
@@ -95,3 +91,40 @@ final Provider<GoRouter> routerProvider = Provider<GoRouter>((ref) {
   ref.onDispose(router.dispose);
   return router;
 });
+
+/// The add / edit form slides up over the tabs (DESIGN_SPEC §7), or appears
+/// in place when the device asks for reduced motion.
+Page<void> _formPage(BuildContext context, GoRouterState state, Widget child) {
+  final duration = MediaQuery.disableAnimationsOf(context)
+      ? Duration.zero
+      : AppMotion.formSlide;
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    fullscreenDialog: true,
+    transitionDuration: duration,
+    reverseTransitionDuration: duration,
+    child: child,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final offset = animation.drive(
+        Tween<Offset>(
+          begin: const Offset(0, 1),
+          end: Offset.zero,
+        ).chain(CurveTween(curve: Curves.easeOutCubic)),
+      );
+      return SlideTransition(
+        position: offset,
+        // A route takes taps while it slides in, so the second tap of a
+        // double tap on "Add expense" or a ledger row would land on
+        // whatever part of the form is passing under the finger.
+        child: AnimatedBuilder(
+          animation: animation,
+          builder: (context, child) => IgnorePointer(
+            ignoring: animation.status == AnimationStatus.forward,
+            child: child,
+          ),
+          child: child,
+        ),
+      );
+    },
+  );
+}

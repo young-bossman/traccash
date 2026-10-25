@@ -125,3 +125,40 @@ for the form's date helper (T5). Matches screenshots 04, 05 and 13.
 (DESIGN_SPEC §6 "1–21 Sep", screenshots 01, 10 and 11), but en_GB's CLDR data gives "Sept".
 `shortMonthName(month)` in `dates.dart` returns a fixed `Jan`…`Dec` list; `CalendarMonth.shortLabel`
 ("Sep 2026") and Home's comparison label (T6) use it. Every other date keeps en_GB formatting.
+
+**2026-10-25 · Add expense button in the shell's Scaffold** — Snackbars ("Expense saved", Undo)
+appear only in the outermost Scaffold, `AppShell`'s, and a Scaffold lifts only its own floating
+button above a snackbar. With the button on the Expenses screen's inner Scaffold, the snackbar
+covered it for 4–5 s. `AppShell` now shows the button for the Expenses tab (Home joins in T6).
+Cost: the shell knows which tabs have an add button.
+
+**2026-10-25 · Hard text limits counted in code points** — The note (200) and category name (20)
+are limited while typing, with an `N / 200` counter, as in the prototype. Flutter's `maxLength`
+counts grapheme clusters, so an emoji-heavy note could pass the field and then fail the repository
+and the CHECK constraint, which count code points. `RuneLengthLimitingTextInputFormatter` mirrors
+Flutter's Android behaviour (typing at the limit is ignored, a paste is cut) but counts runes, and
+cuts only between whole characters, so a 4-code-point emoji is dropped whole rather than split.
+Cost: a counter that counts some emoji as 2 to 7, and a paste is cut silently. The repository still
+validates both limits.
+
+**2026-10-25 · Form state in the widget, not a controller** — The form's values are UI state until
+Save. Text lives in controllers and the category, date and write in progress in the `State`; the
+widget calls the repository through its provider. The double-submit guard reads a field set
+synchronously on the first tap, so a second tap in the same frame (before the button redraws as
+disabled) can't write twice. A Riverpod controller per form would add a family/autoDispose
+provider without making this simpler. Validation is a pure function (`validateExpenseForm`) with
+its own unit tests.
+
+**2026-10-25 · The form route ignores taps while it slides in** — A route receives pointer events
+during its entrance animation. A double tap on Add expense put the second tap on the form sliding
+up underneath, selecting whichever category option was passing. The transition wraps the page in
+an `IgnorePointer` while its animation runs forward (200 ms; nothing under reduced motion).
+
+**2026-10-25 · Category options in rows, not a fixed-extent grid** — DESIGN_SPEC names a 2-column
+`GridView`, but a grid needs a fixed tile height, which clips labels at large text sizes. The
+picker builds rows of two with `IntrinsicHeight`, so both options in a row take the taller one's
+height and grow with the text. Fine for the handful of categories a user has.
+
+**2026-10-25 · Action snackbars stay up for screen readers** — Undo and View time out after 5 s,
+but with TalkBack on (`MediaQuery.accessibleNavigationOf`) they stay until dismissed or actioned,
+since reaching the action by swiping can take longer than 5 s.

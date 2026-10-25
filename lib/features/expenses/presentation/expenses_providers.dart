@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show FutureProviderFamily;
 import 'package:traccash/core/calculations/ledger.dart';
 import 'package:traccash/core/formatting/dates.dart';
 import 'package:traccash/core/formatting/money.dart';
@@ -37,6 +38,15 @@ final StreamProvider<bool> hasAnyExpensesProvider = StreamProvider<bool>(
 final StreamProvider<List<Category>> allCategoriesProvider =
     StreamProvider<List<Category>>(
       (ref) => ref.watch(categoryRepositoryProvider).watchAll(),
+      retry: _noRetry,
+    );
+
+/// One stored expense for the edit form; null when no expense has the id
+/// (deleted elsewhere). Read once when the form opens.
+final FutureProviderFamily<Expense?, int> expenseByIdProvider = FutureProvider
+    .autoDispose
+    .family<Expense?, int>(
+      (ref, id) => ref.watch(expenseRepositoryProvider).getById(id),
       retry: _noRetry,
     );
 

@@ -68,6 +68,24 @@ abstract final class AppSizes {
 
   /// Keeps the last ledger row scrollable clear of the add button.
   static const double fabClearance = 88;
+
+  /// Category option in the form's picker. A minimum: it grows with the
+  /// text scale.
+  static const double categoryOptionMinHeight = 52;
+
+  /// Border of a selected category or icon choice; unselected ones use 1.
+  static const double selectedBorder = 2;
+
+  /// Line under the amount, the form's main input.
+  static const double amountUnderline = 2;
+
+  /// Dashes on the "New category" option's border.
+  static const double dash = 4;
+
+  static const double dashGap = 3;
+
+  /// Icon at the start of an inline error message.
+  static const double inlineIcon = 18;
 }
 
 /// The design allows a single shadow level, reserved for floating layers

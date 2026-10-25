@@ -297,5 +297,63 @@ void main() {
         'Yesterday',
       );
     });
+
+    test('day and month leave out the year in the current year', () {
+      expect(
+        formatDayAndMonth(
+          LocalDate(2026, 10, 21),
+          today: LocalDate(2026, 10, 21),
+        ),
+        '21 October',
+      );
+      expect(
+        formatDayAndMonth(
+          LocalDate(2026, 1, 1),
+          today: LocalDate(2026, 12, 31),
+        ),
+        '1 January',
+      );
+    });
+
+    test('day and month add the year for any other year', () {
+      expect(
+        formatDayAndMonth(
+          LocalDate(2025, 10, 21),
+          today: LocalDate(2026, 10, 21),
+        ),
+        '21 October 2025',
+      );
+      expect(
+        formatDayAndMonth(
+          LocalDate(2026, 12, 31),
+          today: LocalDate(2027, 1, 1),
+        ),
+        '31 December 2026',
+      );
+    });
+
+    test('date field helper says Today, Yesterday or the long date', () {
+      final today = LocalDate(2026, 10, 21);
+      expect(
+        dateFieldHelper(today, today: today),
+        'Today · Wednesday, 21 October 2026',
+      );
+      expect(
+        dateFieldHelper(LocalDate(2026, 10, 20), today: today),
+        'Yesterday · Tuesday, 20 October 2026',
+      );
+      expect(
+        dateFieldHelper(LocalDate(2026, 9, 30), today: today),
+        'Wednesday, 30 September 2026',
+      );
+    });
+  });
+
+  test('toLocalDateTime is local midnight and reads back unchanged', () {
+    final date = LocalDate(2026, 3, 29);
+    final dateTime = date.toLocalDateTime();
+    expect(dateTime.isUtc, isFalse);
+    expect((dateTime.hour, dateTime.minute, dateTime.second), (0, 0, 0));
+    expect(LocalDate.fromDateTime(dateTime), date);
   });
 }

@@ -35,12 +35,25 @@ class FakeExpenseRepository implements ExpenseRepository {
   /// When true, the next write throws [StorageError] and the flag resets.
   bool failNextWrite = false;
 
+  /// While set, [add], [update] and [delete] wait for it before doing
+  /// anything, so a test can act while a write is in flight.
+  Completer<void>? writeGate;
+
+  /// Calls so far, including ones that failed or are still waiting.
+  int addCalls = 0;
+  int updateCalls = 0;
+
   Future<void> dispose() async {
     await _categorySubscription.cancel();
     await _changes.close();
   }
 
   void _notify() => _changes.add(null);
+
+  Future<void> _waitForGate() async {
+    final gate = writeGate;
+    if (gate != null) await gate.future;
+  }
 
   void _maybeFail() {
     if (failNextWrite) {
@@ -115,6 +128,8 @@ class FakeExpenseRepository implements ExpenseRepository {
 
   @override
   Future<Expense> add(ExpenseDraft draft) async {
+    addCalls++;
+    await _waitForGate();
     final clean = _validated(draft);
     final category = categories.byId(clean.categoryId);
     final invalidCategory = validateExpenseCategory(category);
@@ -138,6 +153,8 @@ class FakeExpenseRepository implements ExpenseRepository {
 
   @override
   Future<Expense> update(int id, ExpenseDraft draft) async {
+    updateCalls++;
+    await _waitForGate();
     final clean = _validated(draft);
     final existing = _expenses[id];
     if (existing == null) throw const ExpenseNotFoundError();
@@ -163,6 +180,7 @@ class FakeExpenseRepository implements ExpenseRepository {
 
   @override
   Future<Expense> delete(int id) async {
+    await _waitForGate();
     final existing = _expenses[id];
     if (existing == null) throw const ExpenseNotFoundError();
     _maybeFail();

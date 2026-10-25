@@ -8,7 +8,7 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
 - [x] T2 · Money and date utilities
 - [x] T3 · Data layer: models, database, repositories, demo seeder
 - [x] T4 · Expenses page
-- [ ] T5 · Add / edit expense page
+- [x] T5 · Add / edit expense page
 - [ ] T6 · Home page
 - [ ] T7 · Reports page
 - [ ] T8 · Settings page
@@ -110,6 +110,43 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
   21 Oct 2026) and `test/fakes/fixed_today.dart`. `test/widget/app_shell_test.dart` now uses
   `pumpTestApp`, so opening the Expenses tab never opens the real database.
 
+### T5 · Add / edit expense page (2026-10-25)
+
+- Dependency: `characters` added with `flutter pub add characters` (it ships with Flutter and was
+  already in `pubspec.lock` as a transitive dependency). `lib/` reaches it through
+  `flutter/material.dart`, which re-exports it (a direct import there is flagged
+  `unnecessary_import`); `test/unit/rune_length_limit_test.dart` imports it directly.
+- `lib/features/expenses/presentation/`: `expense_form_screen.dart` (rewritten: add, or load the
+  stored expense with loading / not found / error states), `expense_form.dart` (`ExpenseForm`:
+  state, save, delete, discard), `expense_form_validation.dart` (pure: `ExpenseFormValues` with
+  `differsFrom`, `validateExpenseForm` returning `ValidExpenseForm` / `InvalidExpenseForm`),
+  `amount_field.dart` (`AmountField`), `expense_form_fields.dart` (`ExpenseDateField`, `NoteField`,
+  `SaveBar`, `SaveErrorBanner`), `expense_category_field.dart` (`ExpenseCategoryField`),
+  `expense_form_dialogs.dart` (`confirmDiscard`, `confirmDelete`, `showSavedSnackBar`,
+  `showDeletedSnackBar`, `snackBarActionWindow`), `expenses_providers.dart` (+ `expenseByIdProvider`).
+- `lib/features/categories/presentation/`: `category_picker.dart` (`CategoryPicker`,
+  `OptionSurface`, dashed "New category" option), `new_category_panel.dart` (`NewCategoryPanel`),
+  `category_icons.dart` (+ `userIconLabel`).
+- `lib/shared/rune_length_limit.dart` (`RuneLengthLimitingTextInputFormatter`, `runeCounter`),
+  `lib/shared/widgets/form_field_text.dart` (`FieldLabel`, `FieldError`).
+- `lib/shared/selected_month.dart`: `SelectedMonthNotifier.show(month)`, clamped to January 2000 to
+  the current month.
+- `lib/core/formatting/money.dart`: `formatPesewasForInput` (`4800.00`). `dates.dart`:
+  `LocalDate.toLocalDateTime`, `formatDayAndMonth` (`21 October` / `21 October 2025`),
+  `dateFieldHelper` (`Today · Wednesday, 21 October 2026`).
+- `lib/app/router.dart`: both form routes use `_formPage`, a `CustomTransitionPage` sliding up over
+  200 ms (`AppMotion.formSlide`), with no transition under reduced motion, ignoring taps while it
+  slides in. `lib/app/app_shell.dart`: owns the Add expense button (Expenses tab only for now).
+  `expenses_screen.dart`: its own button removed.
+- `lib/app/theme/app_motion.dart` (new), `app_spacing.dart` (+ `categoryOptionMinHeight`,
+  `selectedBorder`, `amountUnderline`, `dash`, `dashGap`, `inlineIcon`).
+- Fakes: `FakeExpenseRepository` gains `addCalls`, `updateCalls` and `writeGate` (a `Completer`
+  that holds `add` / `update` / `delete` open).
+- Tests: `test/widget/expense_form_test.dart`, `expense_edit_test.dart`,
+  `new_category_panel_test.dart`, helpers `form_test_helpers.dart`;
+  `test/unit/expense_form_validation_test.dart`, `rune_length_limit_test.dart`; new cases in
+  `money_test.dart`, `dates_test.dart`, `expenses_state_test.dart`. No T4 test needed changing.
+
 ## Decisions made during implementation
 
 - **Derived colours** (not on the design board), all AA-tested: light errorContainer `#FEE4E2` /
@@ -196,6 +233,51 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
   removed: it didn't stop a second tap in the same frame either, because go_router updates the
   navigator on the next build.
 
+- **Add expense button lives in `AppShell`** (Expenses tab only until T6 adds Home): snackbars show
+  in the outermost Scaffold only, and only that Scaffold lifts its own button above them. See
+  DECISIONS.md.
+- **Hard length limits counted in code points**, with an `N / 200` (`N / 20`) counter. Typing at
+  the limit is ignored and a paste is cut at the limit, keeping whole characters. See DECISIONS.md.
+- **Form state lives in the widget's `State`**, not a Riverpod controller: text in controllers;
+  category, date, "Save pressed" and the write in progress (`_Write.save` / `_Write.delete`) in
+  fields. The double-submit guard checks that field synchronously, so two taps in one frame still
+  write once. Widgets reach the repository through `ref.read(expenseRepositoryProvider)`.
+- **Messages after the first Save, then live**, for all four fields and the new-category panel.
+  On an invalid Save the first failing field scrolls into view if it is above the screen
+  (`keepVisibleAtStart`); nothing scrolls if it is visible.
+- **"Has changes" compares what would be saved**: `12.5` and `12.50` are the same amount, spaces
+  around a note don't count; invalid amounts compare as trimmed text. A name typed in the open
+  new-category panel also counts.
+- **Back during a write is ignored** (no dialog); local writes take milliseconds.
+- **Error banner**: title "Couldn’t save this expense" for every failed save or delete; body is
+  the screenshot's copy for `StorageError` (and anything unexpected), otherwise the `AppError`'s
+  own message. Non-`AppError` exceptions also show the banner and are rethrown, so a bug is
+  reported rather than swallowed.
+- **Snackbars**: the current one is hidden before a new one shows. Undo and View last 5 s, but
+  stay up until dismissed or actioned while a screen reader is on (`persist` is
+  `MediaQuery.accessibleNavigationOf`, read before the form closes).
+  Everything the actions need (messenger, repository, month notifier) is read before the form
+  closes; the actions never use the form's `ref` or `context`. "Couldn’t restore the expense." if
+  Undo fails (my wording, not in spec).
+- **View only sets the selected month**; the user stays on the current tab.
+- **Delete dialog names the stored record**, not unsaved edits, with the year only outside the
+  current year. Delete does not ask about unsaved edits first; deleting discards them.
+- **Edit form**: amount prefilled with `formatPesewasForInput` (no grouping), not focused. The
+  expense's own category stays in the picker even if it was archived since.
+- **Missing id** (deleted elsewhere): "Expense not found" / "This expense no longer exists." with
+  Close. Not in spec.
+- **The form route ignores taps while it slides in**: a route takes pointer events during its
+  entrance, so the second tap of a double tap on Add expense would otherwise select whatever
+  category passed under the finger.
+- **Opening the new-category panel focuses its name** with an explicit `requestFocus`;
+  `autofocus` yields to the amount field, which usually already has focus.
+- **Category options are rows of two equal-height options**, not a fixed-extent `GridView`, so
+  they grow with the text scale instead of clipping labels.
+- **The amount row is a bare TextField beside a "GH₵" Text on one baseline**, with its own
+  underline: an `InputDecoration` prefix is hidden while the field is empty and unfocused.
+- **Field labels and their fields are merged for screen readers** (`MergeSemantics`), so the
+  amount field reads as "Amount" rather than its hint.
+
 ## Known issues / follow-ups
 
 - **Recheck the back button once tabs have nested routes.** The `PopScope` in `AppShell` assumes
@@ -211,8 +293,8 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
 - **T7: `firstExpenseDate()` is a one-off `Future`.** If the user adds an expense dated before the
   first record while Reports is open, the trend's start month stays stale until Reports reads it
   again. Re-read it when the month's data changes, or add a `watch` variant then.
-- **T5: the note and category-name fields must count code points**, not Flutter's default
-  grapheme count for `maxLength`, or some emoji input will pass the form and fail the repository.
+- ~~T5: the note and category-name fields must count code points~~: resolved in T5 by
+  `RuneLengthLimitingTextInputFormatter`.
 - **`--delete-conflicting-outputs` is ignored** by the installed build_runner (it prints "These
   options have been removed"). `dart run build_runner build` alone is enough; brief §4 can be
   updated.
@@ -221,8 +303,8 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
 - ~~Day labels need a "today" that refreshes~~: resolved in T4 by `todayProvider` (midnight
   timer plus refresh on resume). The midnight timer itself is not unit-tested; that would need an
   injectable clock.
-- **T5:** the edit placeholder accepts any numeric id. The real form must handle an id that no
-  longer exists (`ExpenseNotFoundError`).
+- ~~T5: the edit placeholder accepts any numeric id~~: resolved in T5. A missing id shows "This
+  expense no longer exists."; deleted while open, Save shows that message in the banner.
 - **T6:** Home's month row (03) puts the full label left and the arrows right; `MonthSwitcher`
   only has the compact Expenses layout so far.
 - **A month change shows the ledger spinner briefly** (milliseconds on a local database), by
@@ -232,3 +314,17 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
   than a device. Tile layout positions are tested in Plex. Still check 320dp and large text on the
   emulator.
 - **T6:** Home's comparison label ("1–21 Sep") must use `shortMonthName`, not a `DateFormat`.
+- **T6:** add Home to the tabs that show the Add expense button in `AppShell`
+  (`navigationShell.currentIndex == _expensesIndex` today).
+- **`showDatePicker` has no animation setting**, so its short fade stays on under reduced motion.
+  Every other form motion (route, dialogs, snackbars, scrolling to an error) is skipped.
+- **A category created in the panel stays** if the expense is then discarded (§5b creates it on
+  Add).
+- **The rune limit cuts from the end, like Flutter's `maxLength`:** pasting into the middle of an
+  almost full note keeps the paste and drops the note's last characters.
+- **`expense_form.dart` is ~350 lines**: one `State` whose save, delete and discard flows all
+  change its fields. The amount, date, note and category sections are already separate widgets;
+  splitting further would be by pattern.
+- **A very large amount at large text scrolls sideways** inside the amount field rather than
+  shrinking.
+- **Not yet tapped on a device by the agent**: checked with widget tests and a debug APK build.

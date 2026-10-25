@@ -13,7 +13,8 @@ import 'package:traccash/shared/widgets/empty_state.dart';
 ///
 /// The header (title, month, summary, search, filter chip) stays put; only
 /// the ledger below it scrolls. When space is short (large text, keyboard
-/// open) the ledger gives up height first.
+/// open) the ledger gives up height first. The Add expense button belongs to
+/// `AppShell`, so it can move up when a snackbar appears.
 class ExpensesScreen extends ConsumerStatefulWidget {
   const ExpensesScreen({super.key});
 
@@ -39,11 +40,6 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push(AppRoutes.addExpense),
-        icon: const Icon(Icons.add),
-        label: const Text('Add expense'),
-      ),
       body: SafeArea(
         bottom: false,
         child: LayoutBuilder(

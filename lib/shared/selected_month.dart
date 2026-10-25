@@ -70,4 +70,17 @@ class SelectedMonthNotifier extends Notifier<CalendarMonth> {
   void next() {
     if (canGoForward) state = state.next;
   }
+
+  /// Jumps to [month], kept between [earliest] and the current month. Used
+  /// by the View action after saving an expense to another month.
+  void show(CalendarMonth month) {
+    final current = _current;
+    if (month.first.compareTo(earliest.first) < 0) {
+      state = earliest;
+    } else if (month.first.compareTo(current.first) > 0) {
+      state = current;
+    } else {
+      state = month;
+    }
+  }
 }

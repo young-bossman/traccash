@@ -10,6 +10,8 @@ final DateFormat _numericDate = DateFormat('dd/MM/yyyy', dateLocale);
 final DateFormat _longDate = DateFormat('EEEE, d MMMM y', dateLocale);
 final DateFormat _monthLabel = DateFormat('MMMM y', dateLocale);
 final DateFormat _dayHeading = DateFormat('EEEE, d MMMM', dateLocale);
+final DateFormat _dayAndMonth = DateFormat('d MMMM', dateLocale);
+final DateFormat _dayMonthYear = DateFormat('d MMMM y', dateLocale);
 
 // The design abbreviates September as "Sep"; en_GB's CLDR data says "Sept".
 // A fixed list also can't change with intl updates.
@@ -98,6 +100,10 @@ final class LocalDate implements Comparable<LocalDate> {
 
   DateTime get _asDateTime => DateTime.utc(year, month, day);
 
+  /// Local midnight of this day, for APIs that take a [DateTime] such as
+  /// `showDatePicker`. Read the answer back with [LocalDate.fromDateTime].
+  DateTime toLocalDateTime() => DateTime(year, month, day);
+
   @override
   int compareTo(LocalDate other) {
     if (year != other.year) return year.compareTo(other.year);
@@ -181,6 +187,22 @@ String dayLabel(LocalDate date, {required LocalDate today}) {
   if (date == today) return 'Today';
   if (date == today.addDays(-1)) return 'Yesterday';
   return formatLongDate(date);
+}
+
+/// `21 October` in [today]'s year, `21 October 2025` in any other, so an old
+/// date in a sentence is never mistaken for this year's.
+String formatDayAndMonth(LocalDate date, {required LocalDate today}) =>
+    date.year == today.year
+    ? _dayAndMonth.format(date._asDateTime)
+    : _dayMonthYear.format(date._asDateTime);
+
+/// Helper text under the form's date field:
+/// `Today · Wednesday, 21 October 2026`, `Yesterday · …`, or the long date.
+String dateFieldHelper(LocalDate date, {required LocalDate today}) {
+  final long = formatLongDate(date);
+  if (date == today) return 'Today · $long';
+  if (date == today.addDays(-1)) return 'Yesterday · $long';
+  return long;
 }
 
 /// Ledger group heading: `Today`, `Yesterday`, or `Monday, 19 October`.

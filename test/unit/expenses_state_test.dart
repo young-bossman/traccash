@@ -89,6 +89,35 @@ void main() {
     });
   });
 
+  group('selectedMonthProvider.show', () {
+    test('jumps to an earlier month', () {
+      final container = _container();
+      container
+          .read(selectedMonthProvider.notifier)
+          .show(const CalendarMonth(2026, 9));
+      expect(
+        container.read(selectedMonthProvider),
+        const CalendarMonth(2026, 9),
+      );
+    });
+
+    test('never goes past the current month or before January 2000', () {
+      final container = _container();
+      final notifier = container.read(selectedMonthProvider.notifier)
+        ..show(const CalendarMonth(2026, 11));
+      expect(
+        container.read(selectedMonthProvider),
+        const CalendarMonth(2026, 10),
+      );
+
+      notifier.show(const CalendarMonth(1999, 12));
+      expect(
+        container.read(selectedMonthProvider),
+        const CalendarMonth(2000, 1),
+      );
+    });
+  });
+
   group('expenseFiltersProvider', () {
     testWidgets('applies the query 200 ms after the last change', (
       tester,

@@ -119,6 +119,15 @@ String formatGhs(int pesewas) {
   return '$ghsSymbol ${parts.cedis}${parts.pesewas}';
 }
 
+/// Pesewas as the amount field shows them for editing: `4800.00`.
+///
+/// No grouping commas, so deleting one digit can't leave a misplaced comma
+/// that the parser would then reject. [pesewas] must not be negative.
+String formatPesewasForInput(int pesewas) {
+  assert(pesewas >= 0, 'formatPesewasForInput takes a non-negative amount');
+  return '${pesewas ~/ 100}.${(pesewas % 100).toString().padLeft(2, '0')}';
+}
+
 /// Splits pesewas into grouped cedis and the pesewa part, for the large
 /// monthly total that styles them differently: `2,313` and `.90`.
 ///

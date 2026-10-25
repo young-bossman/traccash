@@ -23,7 +23,23 @@ const Map<String, IconData> _categoryIcons = {
   'work': Icons.work_outline,
 };
 
+/// Names of the icons a user can pick (DESIGN_SPEC §5b), for tooltips and
+/// screen readers.
+const Map<String, String> _userIconLabels = {
+  'tag': 'Tag',
+  'home': 'Home',
+  'family': 'Family',
+  'education': 'Education',
+  'gifts': 'Gifts',
+  'fuel': 'Fuel',
+  'personal_care': 'Personal care',
+  'work': 'Work',
+};
+
 /// The icon for [iconKey]. An unknown key (only possible from a newer build's
 /// data) falls back to the default user icon rather than failing.
 IconData categoryIcon(String iconKey) =>
     _categoryIcons[iconKey] ?? Icons.sell_outlined;
+
+/// What a user icon shows, such as "Personal care".
+String userIconLabel(String iconKey) => _userIconLabels[iconKey] ?? 'Tag';

@@ -200,4 +200,26 @@ void main() {
       expect(() => splitGhs(-1), throwsA(isA<AssertionError>()));
     });
   });
+
+  group('formatPesewasForInput', () {
+    test('writes cedis and two pesewa digits without grouping', () {
+      expect(formatPesewasForInput(18650), '186.50');
+      expect(formatPesewasForInput(480000), '4800.00');
+      expect(formatPesewasForInput(maxPesewas), '1000000.00');
+      expect(formatPesewasForInput(5), '0.05');
+    });
+
+    test('reads back as the same amount', () {
+      for (final pesewas in [1, 29, 1250, 18650, 480000, maxPesewas]) {
+        expect(
+          parsePesewas(formatPesewasForInput(pesewas)),
+          ValidAmount(pesewas),
+        );
+      }
+    });
+
+    test('asserts on negative amounts', () {
+      expect(() => formatPesewasForInput(-1), throwsA(isA<AssertionError>()));
+    });
+  });
 }

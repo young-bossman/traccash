@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:traccash/app/router.dart';
 
-/// Scaffold around the four tabs, with the bottom navigation bar.
+/// Scaffold around the four tabs, with the bottom navigation bar and the
+/// Add expense button.
 class AppShell extends StatelessWidget {
   const AppShell({required this.navigationShell, super.key});
 
   final StatefulNavigationShell navigationShell;
 
   static const int _homeIndex = 0;
+  static const int _expensesIndex = 1;
 
   void _selectTab(int index) {
     // Tapping the tab you're already on returns it to its first screen.
@@ -31,6 +34,18 @@ class AppShell extends StatelessWidget {
       },
       child: Scaffold(
         body: navigationShell,
+        // Here rather than on a tab's own Scaffold: snackbars appear in this
+        // outermost Scaffold, which lifts its own button above them.
+        floatingActionButton: navigationShell.currentIndex == _expensesIndex
+            ? FloatingActionButton.extended(
+                onPressed: () => context.push(AppRoutes.addExpense),
+                icon: const Icon(Icons.add),
+                label: const Text('Add expense'),
+              )
+            : null,
+        floatingActionButtonAnimator: MediaQuery.disableAnimationsOf(context)
+            ? FloatingActionButtonAnimator.noAnimation
+            : null,
         bottomNavigationBar: DecoratedBox(
           decoration: BoxDecoration(
             border: Border(
