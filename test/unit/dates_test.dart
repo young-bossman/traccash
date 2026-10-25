@@ -229,5 +229,73 @@ void main() {
       expect(const CalendarMonth(2026, 10).label, 'October 2026');
       expect(const CalendarMonth(2027, 1).label, 'January 2027');
     });
+
+    test('short month names follow the design, Sep not Sept', () {
+      expect(
+        [for (var m = 1; m <= 12; m++) shortMonthName(m)],
+        [
+          'Jan',
+          'Feb',
+          'Mar',
+          'Apr',
+          'May',
+          'Jun',
+          'Jul',
+          'Aug',
+          'Sep',
+          'Oct',
+          'Nov',
+          'Dec',
+        ],
+      );
+    });
+
+    test('short month name asserts that month is 1 to 12', () {
+      expect(() => shortMonthName(0), throwsA(isA<AssertionError>()));
+      expect(() => shortMonthName(13), throwsA(isA<AssertionError>()));
+    });
+
+    test('short month label for every month', () {
+      expect(
+        [for (var m = 1; m <= 12; m++) CalendarMonth(2026, m).shortLabel],
+        [
+          'Jan 2026',
+          'Feb 2026',
+          'Mar 2026',
+          'Apr 2026',
+          'May 2026',
+          'Jun 2026',
+          'Jul 2026',
+          'Aug 2026',
+          'Sep 2026',
+          'Oct 2026',
+          'Nov 2026',
+          'Dec 2026',
+        ],
+      );
+      expect(const CalendarMonth(2027, 1).shortLabel, 'Jan 2027');
+    });
+
+    test('day heading has the weekday and month but no year', () {
+      expect(formatDayHeading(LocalDate(2026, 10, 19)), 'Monday, 19 October');
+      expect(formatDayHeading(LocalDate(2027, 1, 1)), 'Friday, 1 January');
+    });
+
+    test('ledger day label says Today, Yesterday or the day heading', () {
+      final today = LocalDate(2026, 10, 21);
+      expect(ledgerDayLabel(today, today: today), 'Today');
+      expect(
+        ledgerDayLabel(LocalDate(2026, 10, 20), today: today),
+        'Yesterday',
+      );
+      expect(
+        ledgerDayLabel(LocalDate(2026, 10, 19), today: today),
+        'Monday, 19 October',
+      );
+      expect(
+        ledgerDayLabel(LocalDate(2026, 12, 31), today: LocalDate(2027, 1, 1)),
+        'Yesterday',
+      );
+    });
   });
 }

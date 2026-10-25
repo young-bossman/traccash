@@ -86,3 +86,42 @@ expense streams, which is what we want for labels.
 `AUTOINCREMENT` makes SQLite keep a high-water mark in `sqlite_sequence`, so a deleted id is never
 given to a new row and re-inserting it is safe. Restore checks for an existing row and uses a plain
 insert rather than `INSERT OR IGNORE`, which would also silently skip CHECK violations.
+
+**2026-10-25 · No Riverpod retry for the expense streams** — Riverpod 3 retries a failed provider
+up to 10 times with backoff by default, and `AppError`s are exceptions, so they would be retried.
+A storage error from these streams means an unreadable file or a corrupted row, which retrying
+won't fix, and the screen would flick between error and loading. `monthExpensesProvider`,
+`hasAnyExpensesProvider` and `allCategoriesProvider` set `retry` to return null. The error state
+offers "Try again", which invalidates them.
+
+**2026-10-25 · Fixed Expenses header, shrinking ledger** — Search must stay visible while typing,
+and day headers pin just below it. The title, month, summary, search and filter chip stay fixed;
+the ledger takes what is left. At extreme sizes (320dp, text scale 2.0, keyboard open) the ledger
+gives up height first, and the header scrolls inside itself only if it alone is taller than the
+screen. Cost: on small phones the fixed header uses about 40% of the height.
+
+**2026-10-25 · Large amounts move, they don't shrink** — A row's amount must stay readable and on
+one line, but at 320dp and text scale 2.0 a GH₵ 1,000,000.00 amount can't fit beside the category.
+The amount moves to its own line under the category when staying beside it would leave the
+category and note narrower than 96dp (`AppSizes.ledgerMinTextWidth`), scaled by the text scale
+factor read at the 15px row title size. It scales down only if even its own line is too narrow.
+At text scale 1.0 (IBM Plex Sans), GH₵ 4,800.00 stays beside the category down to 297dp wide and
+GH₵ 1,000,000.00 down to 329dp; at 360dp they move above text scale ×1.33 and ×1.14 (linear
+scaling). Replaces a
+first version that moved the amount once it took more than half the text area, which put
+GH₵ 1,000,000.00 on its own line at 360dp and scale 1.0 with room to spare.
+
+**2026-10-25 · Today as provider state** — Today / Yesterday labels and the next-month limit must
+follow the calendar while the app stays open. `todayProvider` sets a timer for the next local
+midnight and also re-reads the date on app resume, because Android doesn't run Dart timers while
+the app is suspended. Tests override it with a fixed date.
+
+**2026-10-25 · Ledger day headers without the year** — The Expenses page always shows one month, so
+a year in every day header repeats information and lengthens the line beside the day total. Headers
+read Today, Yesterday or "Monday, 19 October" (`EEEE, d MMMM`). The long form with the year stays
+for the form's date helper (T5). Matches screenshots 04, 05 and 13.
+
+**2026-10-25 · Short month names from a fixed list** — The design abbreviates September as "Sep"
+(DESIGN_SPEC §6 "1–21 Sep", screenshots 01, 10 and 11), but en_GB's CLDR data gives "Sept".
+`shortMonthName(month)` in `dates.dart` returns a fixed `Jan`…`Dec` list; `CalendarMonth.shortLabel`
+("Sep 2026") and Home's comparison label (T6) use it. Every other date keeps en_GB formatting.

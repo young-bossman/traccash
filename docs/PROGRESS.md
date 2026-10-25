@@ -7,7 +7,7 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
 - [x] T1 · Foundation: packages, fonts, theme, app shell
 - [x] T2 · Money and date utilities
 - [x] T3 · Data layer: models, database, repositories, demo seeder
-- [ ] T4 · Expenses page
+- [x] T4 · Expenses page
 - [ ] T5 · Add / edit expense page
 - [ ] T6 · Home page
 - [ ] T7 · Reports page
@@ -79,6 +79,37 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
   database_constraints,demo_seed}_test.dart` (+ `data_test_helpers.dart`),
   `test/unit/fake_repositories_test.dart`, `test/widget/settings_demo_button_test.dart`.
 
+### T4 · Expenses page (2026-10-25)
+
+- `lib/shared/selected_month.dart`: `todayProvider` (`TodayNotifier`: a timer at the next local
+  midnight plus a refresh on app resume) and `selectedMonthProvider` (`SelectedMonthNotifier` with
+  `previous` / `next`, `canGoBack` stops at January 2000, `canGoForward` stops at the current month).
+- `lib/shared/widgets/month_switcher.dart` (`MonthSwitcher`), `lib/shared/widgets/empty_state.dart`
+  (`EmptyState`).
+- `lib/core/calculations/ledger.dart`: `DayGroup`, `sumPesewas`, `filterExpenses`, `groupByDay`,
+  `categoryCounts`.
+- `lib/core/formatting/dates.dart`: `shortMonthName(month)` (fixed `Jan`…`Dec`, `Sep` for 9),
+  `CalendarMonth.shortLabel` (`Oct 2026`, built on `shortMonthName`), `formatDayHeading`
+  (`Monday, 19 October`), `ledgerDayLabel`.
+- `lib/features/categories/presentation/category_icons.dart`: `categoryIcon(iconKey)` for every
+  preset and user icon key.
+- `lib/features/expenses/presentation/`: `expenses_providers.dart` (`monthExpensesProvider`,
+  `hasAnyExpensesProvider`, `allCategoriesProvider`, `expenseFiltersProvider` with the 200 ms
+  debounce, `filterCategoryProvider`, `expensesViewProvider` / `ExpensesView` with the summary and
+  no-results copy), `expenses_screen.dart` (rewritten), `expenses_header.dart`,
+  `expense_ledger.dart`, `expense_tile.dart`, `category_filter_sheet.dart`,
+  `expense_form_screen.dart` (placeholder for T5).
+- `lib/app/router.dart`: `AppRoutes.addExpense` (`/expense/new`) and `AppRoutes.editExpense(id)`
+  (`/expense/:id`), full-screen dialogs above the shell. A non-numeric id redirects to Expenses.
+- `lib/app/theme/app_spacing.dart`: `AppSizes.ledgerRowMinHeight`, `iconTile`, `iconTileGlyph`,
+  `ledgerMinTextWidth`, `emptyStateTile`, `emptyStateGlyph`, `fabClearance`.
+- Tests: `test/widget/expenses_screen_test.dart`, `test/widget/expense_tile_test.dart` (loads
+  IBM Plex Sans for real glyph widths), `test/unit/ledger_test.dart`,
+  `test/unit/expenses_state_test.dart`, new label tests in `test/unit/dates_test.dart`. Helpers
+  `test/widget/test_app.dart` (`pumpTestApp`: the whole app on fakes with a fixed today of
+  21 Oct 2026) and `test/fakes/fixed_today.dart`. `test/widget/app_shell_test.dart` now uses
+  `pumpTestApp`, so opening the Expenses tab never opens the real database.
+
 ## Decisions made during implementation
 
 - **Derived colours** (not on the design board), all AA-tested: light errorContainer `#FEE4E2` /
@@ -139,12 +170,41 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
 - **Settings uses Flutter's `ThemeMode`** directly in the repository contract rather than a mirror
   enum.
 
+- Ledger day headers have no year: see DECISIONS.md "Ledger day headers without the year".
+- **Short month names come from a fixed list** (`shortMonthName`), so the switcher shows
+  "Sep 2026" as the design does, not en_GB's "Sept 2026". See DECISIONS.md "Short month names
+  from a fixed list".
+- **The header stays fixed and the ledger shrinks.** The header is capped at the available height
+  and scrolls inside itself only if it alone is taller than the screen (320dp, text scale 2.0,
+  keyboard open).
+- **Amounts never shrink beside the text.** When an amount would leave the category and note
+  narrower than `AppSizes.ledgerMinTextWidth` (96dp, scaled with the text), `ExpenseTile` moves it
+  to its own line under the category, and it scales down only if even that line is too narrow. At
+  text scale 1.0, GH₵ 1,000,000.00 stays beside the category from 329dp wide up. The month label
+  and day totals scale down only past the point where they would overflow.
+- **Filters survive month changes and tab switches** (provider state, not widget state), which
+  matches the "Nothing in October 2026…" copy.
+- **First use is detected with `watchRecent(limit: 1)`**, so the repository contract is unchanged.
+- **Retry is off for the Expenses stream providers** (see DECISIONS.md); the error state has a
+  "Try again" button that invalidates them.
+- **The filter sheet lists every active category with its count (0 included)**, plus archived
+  categories only when that month uses them.
+- **`RadioGroup<int?>`**, with null as "All categories", because `RadioListTile.groupValue` is
+  deprecated in Flutter 3.47.
+- **No double-tap guard on Add expense or row taps.** A second tap 50 ms later is already
+  blocked by the route transition (tested). A guard checking `ModalRoute.isCurrent` was tried and
+  removed: it didn't stop a second tap in the same frame either, because go_router updates the
+  navigator on the next build.
+
 ## Known issues / follow-ups
 
 - **Recheck the back button once tabs have nested routes.** The `PopScope` in `AppShell` assumes
-  each tab is a single page. When a tab pushes a child route (or the add/edit form opens), back
-  must pop that route first, then go to Home, then exit. Add a widget test for that case.
-- Widget tests render with the test font (Ahem), so Plex is only verifiable on a device.
+  each tab is a single page. Back from the add/edit form now returns to Expenses (tested in T4).
+  A tab with its own child route would still need a test.
+- **Widget tests render in the Ahem test font by default**, which is much wider than Plex
+  (GH₵ 4,800.00 is 180dp in Ahem, 97dp in Plex). Plex can be loaded in a test with `FontLoader`
+  and `rootBundle`, as `expense_tile_test.dart` does; a loaded font stays for the rest of that
+  file, so tests that need Ahem's stricter widths go in another file.
 - **Asserts are debug-only.** `LocalDate(2026, 2, 30)` and `formatGhs(-1)` are caught in
   debug and tests but not in release. Resolved for stored data in T3: the type converter reads via
   `parseIso`. Forms must still build `LocalDate`s from the date picker or validated input.
@@ -158,5 +218,17 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
   updated.
 - **Debug run not yet tapped on a device** by the agent; a debug APK build was used as the Android
   compile check.
-- **Day labels need a "today" that refreshes.** If the app stays open past midnight, Today and
-  Yesterday labels are stale until something rebuilds. Address when the ledger is built (T4).
+- ~~Day labels need a "today" that refreshes~~: resolved in T4 by `todayProvider` (midnight
+  timer plus refresh on resume). The midnight timer itself is not unit-tested; that would need an
+  injectable clock.
+- **T5:** the edit placeholder accepts any numeric id. The real form must handle an id that no
+  longer exists (`ExpenseNotFoundError`).
+- **T6:** Home's month row (03) puts the full label left and the arrows right; `MonthSwitcher`
+  only has the compact Expenses layout so far.
+- **A month change shows the ledger spinner briefly** (milliseconds on a local database), by
+  design: the old month's rows are never shown under the new label.
+- **Search has no accent folding:** "ecole" does not find "École".
+- **Screen-level overflow tests run in Ahem**, which is wider than Plex, so they are stricter
+  than a device. Tile layout positions are tested in Plex. Still check 320dp and large text on the
+  emulator.
+- **T6:** Home's comparison label ("1–21 Sep") must use `shortMonthName`, not a `DateFormat`.

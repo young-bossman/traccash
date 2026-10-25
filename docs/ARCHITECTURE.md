@@ -291,8 +291,8 @@ generated file with the change.
   months), rounded to the nearest pesewa.
 - **Trend (Reports):** daily bars for the selected month; monthly bars for up to 6 months, never
   earlier than the first record. The axis maximum rounds up to 1, 2, 2.5 or 5 × 10ⁿ cedis.
-- Dates display as `21/10/2026`, `Wednesday, 21 October 2026`, `October 2026`, and Today / Yesterday
-  in the ledger.
+- Dates display as `21/10/2026`, `Wednesday, 21 October 2026`, `October 2026`, `Oct 2026` (month
+  switcher), and Today / Yesterday / `Monday, 19 October` (ledger day headers, no year).
 
 ## 9. Validation and error handling
 

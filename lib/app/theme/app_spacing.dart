@@ -48,6 +48,26 @@ abstract final class AppSizes {
 
   /// Also the minimum touch target.
   static const double buttonHeight = 48;
+
+  /// Ledger row (`ExpenseTile`).
+  static const double ledgerRowMinHeight = 64;
+
+  /// Neutral square behind a category icon in a ledger row.
+  static const double iconTile = 40;
+
+  static const double iconTileGlyph = 20;
+
+  /// Narrowest the category and note may get beside a ledger amount (at text
+  /// scale 1.0) before the amount moves to its own line.
+  static const double ledgerMinTextWidth = 96;
+
+  /// Icon square at the top of an empty state.
+  static const double emptyStateTile = 56;
+
+  static const double emptyStateGlyph = 28;
+
+  /// Keeps the last ledger row scrollable clear of the add button.
+  static const double fabClearance = 88;
 }
 
 /// The design allows a single shadow level, reserved for floating layers

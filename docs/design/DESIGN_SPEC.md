@@ -85,7 +85,7 @@ layers only: add button, snackbar, dialog, sheet.
 | Monthly total | `Text.rich` with two spans | Cedis at displaySmall, pesewas smaller in onSurfaceVariant. Not a card. |
 | Category breakdown bar | `Row` of `Expanded(flex: pesewas)` | No chart library. Top 3 categories + "N other categories". Wrap in `Semantics` with a text summary. |
 | Ledger row (`ExpenseTile`) | `InkWell` + `Row` | Min height 64, icon tile 40 (neutral surface-2, monochrome icon), amount trailing and never shrinks, note `maxLines: 1` ellipsis. Rows on one continuous surface with inset dividers aligned to the text column (a ledger, not a stack of cards). |
-| Date group header | pinned `SliverPersistentHeader` (or `SliverMainAxisGroup`) | Today / Yesterday / full date, plus the day total. |
+| Date group header | `SliverMainAxisGroup` + `PinnedHeaderSliver` | Today / Yesterday / weekday, day and month without the year ("Monday, 19 October"; the page shows one month), plus the day total. |
 | Search field | `TextField` + prefix/suffix icons | Debounce ~200 ms in the provider, not the widget. |
 | Category filter | `showModalBottomSheet` + `RadioListTile` | Single choice, with counts for the selected month. |
 | Add/edit form | full-screen route (`fullscreenDialog: true`) | `PopScope` guards unsaved changes. Save button lives in `bottomNavigationBar` so it rides above the keyboard. |

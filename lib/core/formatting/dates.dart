@@ -9,6 +9,31 @@ final RegExp _isoDate = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$');
 final DateFormat _numericDate = DateFormat('dd/MM/yyyy', dateLocale);
 final DateFormat _longDate = DateFormat('EEEE, d MMMM y', dateLocale);
 final DateFormat _monthLabel = DateFormat('MMMM y', dateLocale);
+final DateFormat _dayHeading = DateFormat('EEEE, d MMMM', dateLocale);
+
+// The design abbreviates September as "Sep"; en_GB's CLDR data says "Sept".
+// A fixed list also can't change with intl updates.
+const List<String> _shortMonthNames = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
+/// `Sep` for 9. The only source of short month names, for the month
+/// switcher and comparison labels such as "1–21 Sep".
+String shortMonthName(int month) {
+  assert(month >= 1 && month <= 12, 'Month must be 1 to 12');
+  return _shortMonthNames[month - 1];
+}
 
 int _daysInMonth(int year, int month) =>
     // Day 0 of the next month is the last day of this one.
@@ -125,6 +150,9 @@ final class CalendarMonth {
   /// `October 2026`.
   String get label => _monthLabel.format(DateTime.utc(year, month));
 
+  /// `Oct 2026`, for the month switcher.
+  String get shortLabel => '${shortMonthName(month)} $year';
+
   @override
   bool operator ==(Object other) =>
       other is CalendarMonth && other.year == year && other.month == month;
@@ -143,10 +171,21 @@ String formatNumericDate(LocalDate date) =>
 /// `Wednesday, 21 October 2026`.
 String formatLongDate(LocalDate date) => _longDate.format(date._asDateTime);
 
+/// `Monday, 19 October`: the long date without the year, for headings inside
+/// a screen that already names the month.
+String formatDayHeading(LocalDate date) => _dayHeading.format(date._asDateTime);
+
 /// `Today`, `Yesterday`, or the long date. [today] is passed in so the label
 /// is predictable in tests and consistent across one screen build.
 String dayLabel(LocalDate date, {required LocalDate today}) {
   if (date == today) return 'Today';
   if (date == today.addDays(-1)) return 'Yesterday';
   return formatLongDate(date);
+}
+
+/// Ledger group heading: `Today`, `Yesterday`, or `Monday, 19 October`.
+String ledgerDayLabel(LocalDate date, {required LocalDate today}) {
+  if (date == today) return 'Today';
+  if (date == today.addDays(-1)) return 'Yesterday';
+  return formatDayHeading(date);
 }

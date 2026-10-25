@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:traccash/app/app.dart';
 import 'package:traccash/features/expenses/presentation/expenses_screen.dart';
 import 'package:traccash/features/home/presentation/home_screen.dart';
 import 'package:traccash/features/reports/presentation/reports_screen.dart';
 import 'package:traccash/features/settings/presentation/settings_screen.dart';
 
-Future<void> pumpApp(WidgetTester tester) async {
-  await tester.pumpWidget(const ProviderScope(child: TracCashApp()));
-  await tester.pumpAndSettle();
-}
+import 'test_app.dart';
+
+// Fake repositories, so opening the Expenses tab never touches a database.
+Future<void> pumpApp(WidgetTester tester) => pumpTestApp(tester);
 
 /// Tab labels also appear as screen titles, so tap inside the nav bar only.
 Future<void> tapTab(WidgetTester tester, String label) async {
