@@ -200,3 +200,14 @@ month or the day changes, or after Try again on a month failure.
 **2026-10-25 · Recent follows the selected month** — Home's Recent list is the selected month's 5
 latest expenses (the start of the same list Expenses shows), not the latest 5 overall, so every
 section on Home and View all describe one month. It needs no extra stream.
+
+**2026-10-25 · Empty-month body depends on the month** — Not in spec, chosen after review. T4's
+"Nothing was recorded for this month." also showed for past months, where "this month" reads as
+the calendar month. The body is now "Nothing recorded so far this month." for the current month
+and "Nothing was recorded that month." for a past one; the title above names the month.
+`EmptyMonthState`, shared by Home and Expenses, reads `todayProvider` to tell them apart.
+
+**2026-10-25 · Single-category sentence without a possessive** — Not in spec, chosen after
+review. "Food is all of September 2026's spending." read awkwardly, so Home says "Food is all the
+spending this month." for the current month and "Food is all the spending in September 2026." for
+a past one.

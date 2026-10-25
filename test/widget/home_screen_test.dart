@@ -227,14 +227,27 @@ void main() {
       );
     });
 
-    testWidgets('a single category is all of the month', (tester) async {
+    testWidgets('a single category is all the spending this month', (
+      tester,
+    ) async {
       await pumpHome(tester, seed: [draft(4500, PresetIds.food)]);
 
+      expect(find.text('Food is all the spending this month.'), findsOneWidget);
+      expect(inBreakdown(find.text('100.0%')), findsOneWidget);
+    });
+
+    testWidgets('a single category in a past month names the month', (
+      tester,
+    ) async {
+      await pumpHome(tester, seed: [draft(4500, PresetIds.food, date: sep(3))]);
+
+      await tester.tap(find.byTooltip('Previous month'));
+      await tester.pumpAndSettle();
+
       expect(
-        find.text('Food is all of this month’s spending.'),
+        find.text('Food is all the spending in September 2026.'),
         findsOneWidget,
       );
-      expect(inBreakdown(find.text('100.0%')), findsOneWidget);
     });
   });
 
@@ -343,11 +356,24 @@ void main() {
 
       expect(find.text('GH₵ 0.00'), findsOneWidget);
       expect(find.text('No expenses in October 2026'), findsOneWidget);
-      expect(find.text('Nothing was recorded for this month.'), findsOneWidget);
+      expect(find.text('Nothing recorded so far this month.'), findsOneWidget);
       expect(comparisonIcon, findsNothing);
       expect(find.text('Breakdown'), findsNothing);
       expect(find.text('Recent'), findsNothing);
       expect(find.text('No expenses yet'), findsNothing);
+    });
+
+    testWidgets('an empty past month says "that month"', (tester) async {
+      await pumpHome(tester, seed: october);
+
+      await tester.tap(find.byTooltip('Previous month'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Spent in September 2026'), findsOneWidget);
+      expect(find.text('GH₵ 0.00'), findsOneWidget);
+      expect(find.text('No expenses in September 2026'), findsOneWidget);
+      expect(find.text('Nothing was recorded that month.'), findsOneWidget);
+      expect(find.text('Nothing recorded so far this month.'), findsNothing);
     });
 
     testWidgets('loading shows a spinner and no figures', (tester) async {

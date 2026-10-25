@@ -120,8 +120,12 @@ final class HomeView {
           '${formatGhs(top.totalPesewas)} each.';
     }
     final name = largest.single.name;
+    if (slices.length == 1) {
+      return isCurrentMonth
+          ? '$name is all the spending this month.'
+          : '$name is all the spending in ${month.label}.';
+    }
     final ofMonth = isCurrentMonth ? 'this month' : month.label;
-    if (slices.length == 1) return '$name is all of $ofMonth’s spending.';
     return '$name is the largest share of $ofMonth, '
         'at ${formatShare(top.shareTenths)}.';
   }

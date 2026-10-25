@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:traccash/app/router.dart';
 import 'package:traccash/app/theme/app_spacing.dart';
 import 'package:traccash/core/errors/app_error.dart';
 import 'package:traccash/core/formatting/dates.dart';
+import 'package:traccash/shared/selected_month.dart';
 
 // The states below are shared so Home and Expenses always word them alike.
 
@@ -28,18 +30,24 @@ class FirstUseState extends StatelessWidget {
   }
 }
 
-/// [month] has no expenses, though other months do.
-class EmptyMonthState extends StatelessWidget {
+/// [month] has no expenses, though other months do. The body says "so far
+/// this month" only for the current month; "this month" would read as the
+/// calendar month while a past month is shown.
+class EmptyMonthState extends ConsumerWidget {
   const EmptyMonthState({required this.month, super.key});
 
   final CalendarMonth month;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Watched so the wording changes when the month turns over.
+    final isCurrentMonth = month.contains(ref.watch(todayProvider));
     return EmptyState(
       icon: Icons.calendar_month_outlined,
       title: 'No expenses in ${month.label}',
-      message: 'Nothing was recorded for this month.',
+      message: isCurrentMonth
+          ? 'Nothing recorded so far this month.'
+          : 'Nothing was recorded that month.',
     );
   }
 }

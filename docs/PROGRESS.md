@@ -186,6 +186,18 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
   `home_layout_test.dart` (Plex), date-subtitle cases in `expense_tile_test.dart`. Helpers
   `test/widget/home_seed.dart` (the 01 month), `plex_font.dart` (shared `loadPlex`); `PresetIds`
   gains shopping, entertainment, other.
+- Follow-up after review:
+  - `expenses_header.dart`: the title / month switcher `Wrap` sits in
+    `SizedBox(width: double.infinity)`. Under the header's `Column(crossAxisAlignment: start)` it
+    had shrunk to its children, so `spaceBetween` left the switcher right after the title instead
+    of at the right edge (04, 05, 06, 13). It still wraps below the title at large text. Test:
+    `test/widget/expenses_layout_test.dart` (Plex).
+  - `EmptyMonthState` (Home and Expenses) watches `todayProvider`: "Nothing recorded so far this
+    month." for the current month, "Nothing was recorded that month." for a past one. Tests in
+    `home_screen_test.dart` and `expenses_screen_test.dart`.
+  - Home's single-category sentence: "Food is all the spending this month." / "Food is all the
+    spending in September 2026." Tests in `home_state_test.dart` and `home_screen_test.dart`.
+  - `category_filter_sheet.dart`: the class comment says "the selected month".
 
 ## Decisions made during implementation
 
@@ -351,9 +363,11 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
   2026"; "GH₵ X more than 1–21 Sep"; "Same as 1–21 Sep"; "1–31 Aug" for past months (format chosen
   by Bossman); "Bills is the largest share of September 2026, at 33.2%."; "Food and Transport share
   the largest amount, GH₵ 50.00 each." ("Food and Transport share…" from Bossman, the rest mine);
-  "Food is all of this month’s spending."; "19 Oct" after a note in Recent; the bar's summary
-  "Bills 33.2%, Shopping 25.0%, …". Reused from T4: "No expenses in October 2026", "Nothing was
-  recorded for this month.", "Couldn’t load expenses", "Try again", "Loading expenses".
+  "19 Oct" after a note in Recent; the bar's summary "Bills 33.2%, Shopping 25.0%, …". Chosen
+  after review (DECISIONS.md): "Food is all the spending this month." / "Food is all the spending
+  in September 2026."; "Nothing recorded so far this month." / "Nothing was recorded that month."
+  (replacing T4's "Nothing was recorded for this month."). Reused from T4: "No expenses in
+  October 2026", "Couldn’t load expenses", "Try again", "Loading expenses".
 
 ## Known issues / follow-ups
 
@@ -402,11 +416,6 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
 - **A very large amount at large text scrolls sideways** inside the amount field rather than
   shrinking.
 - **Not yet tapped on a device by the agent**: checked with widget tests and a debug APK build.
-- **Found in T6, not fixed (T4 code): the Expenses month switcher isn't at the right edge.** In
-  Plex at 412dp it sits right after the title (x 118–285, not ending at 392 as in 04). The
-  header's `Wrap(alignment: spaceBetween)` is in a `Column(crossAxisAlignment: start)`, and a
-  `Wrap` only spreads its children when its width is fixed. One-line fix: give that `Wrap` the full
-  width (for example `SizedBox(width: double.infinity, child: Wrap(...))`).
 - **Home's compare line has no retry of its own.** If only the earlier period fails, the line stays
   hidden until the month or day changes (decided: hide rather than show an error).
 - **"Reports" and "View all" text sits a button's padding in from the gutter** (the button's right

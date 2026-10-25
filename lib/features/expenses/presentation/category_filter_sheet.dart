@@ -13,8 +13,8 @@ Future<void> showCategoryFilterSheet(BuildContext context) {
 }
 
 /// "All categories", then every active category and any archived one used
-/// this month, each with its count for the month. Choosing one applies it
-/// and closes the sheet.
+/// in the selected month, each with its count for that month. Choosing one
+/// applies it and closes the sheet.
 class CategoryFilterSheet extends ConsumerWidget {
   const CategoryFilterSheet({super.key});
 

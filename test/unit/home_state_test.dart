@@ -232,19 +232,22 @@ void main() {
       );
     });
 
-    test('a single category is all of the month', () {
+    test('a single category is all the spending this month', () {
       final onlyFood = _expenses([(4500, food, _oct(21))]);
 
       expect(
         _view(expenses: onlyFood).largestShareSentence,
-        'Food is all of this month’s spending.',
+        'Food is all the spending this month.',
       );
+    });
+
+    test('a single category in a past month names the month', () {
       expect(
         _view(
           month: _september,
           expenses: _expenses([(4500, food, LocalDate(2026, 9, 3))]),
         ).largestShareSentence,
-        'Food is all of September 2026’s spending.',
+        'Food is all the spending in September 2026.',
       );
     });
   });

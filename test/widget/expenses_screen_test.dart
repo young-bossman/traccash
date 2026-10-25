@@ -252,6 +252,29 @@ void main() {
       expect(find.text('Wednesday, 30 September'), findsOneWidget);
     });
 
+    testWidgets('an empty month says "so far this month" only for the '
+        'current month', (tester) async {
+      await pumpExpenses(
+        tester,
+        seed: [draft(2000, PresetIds.bills, date: LocalDate(2026, 9, 30))],
+      );
+
+      expect(find.text('No expenses in October 2026'), findsOneWidget);
+      expect(find.text('Nothing recorded so far this month.'), findsOneWidget);
+      expect(find.text('Nothing was recorded that month.'), findsNothing);
+
+      // August: a past month with nothing in it.
+      await tester.tap(find.byTooltip('Previous month'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Previous month'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Aug 2026'), findsOneWidget);
+      expect(find.text('No expenses in August 2026'), findsOneWidget);
+      expect(find.text('Nothing was recorded that month.'), findsOneWidget);
+      expect(find.text('Nothing recorded so far this month.'), findsNothing);
+    });
+
     testWidgets('next month is disabled at the current month', (tester) async {
       await pumpExpenses(tester, seed: october);
 
