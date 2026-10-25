@@ -208,6 +208,27 @@ abstract final class AppTheme {
           textStyle: AppTypography.labelLarge,
         ),
       ),
+      // Settings' theme choice. Selected segments take the tonal fill and a
+      // check icon, so selection never depends on colour alone.
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: SegmentedButton.styleFrom(
+          // Segments ignore minimumSize and draw 40dp high inside a padded
+          // 48dp touch area. This padding draws them at the design's 48dp
+          // (all segments take the tallest one's height), which is a full
+          // touch target with no extra padding.
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.s12,
+            vertical: AppSizes.segmentVerticalPadding,
+          ),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          shape: buttonShape,
+          textStyle: AppTypography.labelLarge,
+          side: BorderSide(color: scheme.outline),
+          foregroundColor: scheme.onSurface,
+          selectedForegroundColor: scheme.onPrimaryContainer,
+          selectedBackgroundColor: scheme.primaryContainer,
+        ),
+      ),
       inputDecorationTheme: InputDecorationThemeData(
         filled: true,
         fillColor: palette.card,

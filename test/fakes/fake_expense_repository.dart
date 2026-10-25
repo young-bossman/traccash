@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:traccash/core/errors/app_error.dart';
 import 'package:traccash/core/formatting/dates.dart';
+import 'package:traccash/data/database/simulated_failure.dart';
 import 'package:traccash/features/expenses/data/expense_repository.dart';
 import 'package:traccash/features/expenses/domain/expense.dart';
 import 'package:traccash/features/expenses/domain/expense_validation.dart';
@@ -18,6 +19,7 @@ class FakeExpenseRepository implements ExpenseRepository {
     this.categories, {
     LocalDate Function()? today,
     DateTime Function()? clock,
+    this.simulatedFailure,
   }) : _today = today ?? LocalDate.today,
        _clock = clock ?? DateTime.now {
     // Labels follow category changes, as they do through a Drift join.
@@ -34,6 +36,9 @@ class FakeExpenseRepository implements ExpenseRepository {
 
   /// When true, the next write throws [StorageError] and the flag resets.
   bool failNextWrite = false;
+
+  /// The Settings "Fail the next save" hook, as the Drift repository gets it.
+  final bool Function()? simulatedFailure;
 
   /// While set, [add], [update] and [delete] wait for it before doing
   /// anything, so a test can act while a write is in flight.
@@ -64,6 +69,7 @@ class FakeExpenseRepository implements ExpenseRepository {
       failNextWrite = false;
       throw const StorageError();
     }
+    throwIfSimulated(simulatedFailure);
   }
 
   // Re-reads the category so an archive shows up on old expenses.

@@ -6,6 +6,7 @@ import 'package:traccash/core/formatting/dates.dart';
 import 'package:traccash/core/formatting/money.dart';
 import 'package:traccash/features/expenses/data/expense_repository.dart';
 import 'package:traccash/features/expenses/domain/expense.dart';
+import 'package:traccash/shared/reduced_motion.dart';
 
 /// How long a snackbar with Undo or View stays up (DESIGN_SPEC §7).
 const Duration snackBarActionWindow = Duration(seconds: 5);
@@ -73,11 +74,6 @@ Future<bool> confirmDelete(
   return delete ?? false;
 }
 
-/// No fade under reduced motion; Flutter's default otherwise. For every
-/// dialog the form opens, the date picker included.
-AnimationStyle? dialogAnimation(BuildContext context) =>
-    MediaQuery.disableAnimationsOf(context) ? AnimationStyle.noAnimation : null;
-
 // The snackbars below are shown after the form has closed, so they take the
 // messenger, repository and callbacks captured beforehand and never touch
 // the form's context or ref.
@@ -99,7 +95,7 @@ void showSavedSnackBar(
   required bool screenReader,
 }) {
   final saved = editing ? 'Changes saved' : 'Expense saved';
-  _show(
+  showReplacingSnackBar(
     messenger,
     otherMonth == null
         ? SnackBar(content: Text(saved))
@@ -126,7 +122,7 @@ void showDeletedSnackBar(
     try {
       await repository.restore(deleted);
     } on AppError {
-      _show(
+      showReplacingSnackBar(
         messenger,
         const SnackBar(content: Text('Couldn’t restore the expense.')),
         reduceMotion: reduceMotion,
@@ -134,7 +130,7 @@ void showDeletedSnackBar(
     }
   }
 
-  _show(
+  showReplacingSnackBar(
     messenger,
     SnackBar(
       content: const Text('Expense deleted'),
@@ -144,20 +140,4 @@ void showDeletedSnackBar(
     ),
     reduceMotion: reduceMotion,
   );
-}
-
-/// Replaces whatever snackbar is showing, so feedback is about the latest
-/// action.
-void _show(
-  ScaffoldMessengerState messenger,
-  SnackBar snackBar, {
-  required bool reduceMotion,
-}) {
-  if (!messenger.mounted) return;
-  messenger
-    ..hideCurrentSnackBar()
-    ..showSnackBar(
-      snackBar,
-      snackBarAnimationStyle: reduceMotion ? AnimationStyle.noAnimation : null,
-    );
 }

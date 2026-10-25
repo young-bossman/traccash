@@ -5,7 +5,7 @@ import 'package:traccash/app/theme/app_typography.dart';
 import 'package:traccash/core/errors/app_error.dart';
 import 'package:traccash/core/formatting/dates.dart';
 import 'package:traccash/features/expenses/domain/expense_validation.dart';
-import 'package:traccash/features/expenses/presentation/expense_form_dialogs.dart';
+import 'package:traccash/shared/reduced_motion.dart';
 import 'package:traccash/shared/rune_length_limit.dart';
 import 'package:traccash/shared/widgets/form_field_text.dart';
 

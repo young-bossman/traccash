@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' show ThemeMode;
 import 'package:traccash/data/database/app_database.dart';
 import 'package:traccash/data/database/db_errors.dart';
+import 'package:traccash/data/database/simulated_failure.dart';
 import 'package:traccash/features/settings/data/settings_repository.dart';
 
 const String themeModeKey = 'theme_mode';
@@ -21,9 +22,11 @@ ThemeMode themeModeFromText(String? text) => switch (text) {
 };
 
 class DriftSettingsRepository implements SettingsRepository {
-  DriftSettingsRepository(this._db);
+  /// [simulatedFailure] is the debug "Fail the next save" hook.
+  DriftSettingsRepository(this._db, {this._simulatedFailure});
 
   final AppDatabase _db;
+  final bool Function()? _simulatedFailure;
 
   @override
   Stream<ThemeMode> watchThemeMode() {
@@ -35,14 +38,15 @@ class DriftSettingsRepository implements SettingsRepository {
   }
 
   @override
-  Future<void> setThemeMode(ThemeMode mode) => guardDb(
-    () => _db
+  Future<void> setThemeMode(ThemeMode mode) => guardDb(() {
+    throwIfSimulated(_simulatedFailure);
+    return _db
         .into(_db.appSettings)
         .insertOnConflictUpdate(
           AppSettingsCompanion.insert(
             key: themeModeKey,
             value: themeModeToText(mode),
           ),
-        ),
-  );
+        );
+  });
 }

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:traccash/core/errors/app_error.dart';
+import 'package:traccash/data/database/simulated_failure.dart';
 import 'package:traccash/features/categories/data/category_repository.dart';
 import 'package:traccash/features/categories/domain/category.dart';
 import 'package:traccash/features/categories/domain/category_validation.dart';
@@ -10,7 +11,7 @@ import 'fake_streams.dart';
 /// In-memory [CategoryRepository] for widget tests. Starts with the 8
 /// presets (ids 1 to 8) and applies the same validation as the real one.
 class FakeCategoryRepository implements CategoryRepository {
-  FakeCategoryRepository({DateTime Function()? clock})
+  FakeCategoryRepository({DateTime Function()? clock, this.simulatedFailure})
     : _clock = clock ?? DateTime.now {
     final createdAt = DateTime.utc(2026);
     for (final (index, preset) in presetCategories.indexed) {
@@ -36,6 +37,9 @@ class FakeCategoryRepository implements CategoryRepository {
 
   /// When true, the next write throws [StorageError] and the flag resets.
   bool failNextWrite = false;
+
+  /// The Settings "Fail the next save" hook, as the Drift repository gets it.
+  final bool Function()? simulatedFailure;
 
   /// Fires after every change, so the fake expense repository can re-emit
   /// joined labels the way a Drift join does.
@@ -63,6 +67,7 @@ class FakeCategoryRepository implements CategoryRepository {
       failNextWrite = false;
       throw const StorageError();
     }
+    throwIfSimulated(simulatedFailure);
   }
 
   List<Category> _sorted(bool Function(Category) keep) =>

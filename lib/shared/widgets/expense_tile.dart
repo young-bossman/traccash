@@ -6,6 +6,7 @@ import 'package:traccash/core/formatting/money.dart';
 import 'package:traccash/features/categories/presentation/category_icons.dart';
 import 'package:traccash/features/expenses/domain/expense.dart';
 import 'package:traccash/shared/text_measure.dart';
+import 'package:traccash/shared/widgets/icon_tile.dart';
 
 /// One ledger row: category icon, category name, note, amount.
 ///
@@ -94,7 +95,7 @@ class ExpenseTile extends StatelessWidget {
                           textColumn - _gap - scaledMinTextWidth(context);
                       return Row(
                         children: [
-                          _IconTile(categoryIcon(expense.category.iconKey)),
+                          IconTile(categoryIcon(expense.category.iconKey)),
                           const SizedBox(width: _gap),
                           Expanded(
                             child: Column(
@@ -127,32 +128,6 @@ class ExpenseTile extends StatelessWidget {
           ),
           if (showDivider) const Divider(indent: textInset),
         ],
-      ),
-    );
-  }
-}
-
-/// Neutral square with a monochrome icon; the category is named in text, so
-/// the icon is decorative.
-class _IconTile extends StatelessWidget {
-  const _IconTile(this.icon);
-
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      width: AppSizes.iconTile,
-      height: AppSizes.iconTile,
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHigh,
-        borderRadius: const BorderRadius.all(AppRadius.r12),
-      ),
-      child: Icon(
-        icon,
-        size: AppSizes.iconTileGlyph,
-        color: scheme.onSurfaceVariant,
       ),
     );
   }

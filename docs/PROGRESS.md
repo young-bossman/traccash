@@ -11,7 +11,7 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
 - [x] T5 · Add / edit expense page
 - [x] T6 · Home page
 - [x] T7 · Reports page
-- [ ] T8 · Settings page
+- [x] T8 · Settings page
 - [ ] T9 · Hardening
 - [ ] T10 · Release prep
 
@@ -231,6 +231,59 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
   `reports_state_test.dart`, `lists_test.dart`, a `CalendarMonth.name` case in `dates_test.dart`;
   `test/widget/reports_screen_test.dart` (Ahem), `reports_layout_test.dart` (Plex).
 
+### T8 · Settings page (2026-10-25)
+
+- Dependency: `package_info_plus` added with `flutter pub add package_info_plus` (approved by
+  Bossman) for the Version row. New `pubspec.lock` entries: `package_info_plus` 10.2.2,
+  `package_info_plus_platform_interface` 4.1.0, and for other platforms `http` 1.6.0, `win32` 6.4.0
+  and `ffi_leak_tracker` 0.1.2. The plugin's Android manifest adds no permission.
+- `lib/features/settings/presentation/`:
+  - `settings_screen.dart`: rewritten. `showDeveloper` defaults to `kDebugMode`.
+  - `settings_providers.dart`: `themeModeProvider`, `appVersionProvider` (`0.1.0 (1)`) and
+    `readInitialThemeMode`.
+  - One file per section: `settings_appearance.dart` (`AppearanceSection`), `settings_general.dart`
+    (`GeneralSection`) and `settings_developer.dart` (`DeveloperSection`).
+  - `settings_row.dart`: `SettingsHeading` and `SettingsRow`.
+  - The planned single `settings_sections.dart` would have passed 300 lines, so it was split by
+    widget.
+- `lib/data/database/simulated_failure.dart`: `failNextWriteProvider` (`FailNextWriteNotifier` with
+  `set` / `take`), `simulatedFailureHook(ref, {debug})` and `throwIfSimulated`.
+- The Drift repositories take an optional `simulatedFailure` hook.
+  - It is checked after validation and before each write: expenses `add`, `update`, `delete`,
+    `restore` and `clearAll`; categories `create` and `archive`; settings `setThemeMode`.
+  - Their providers pass `simulatedFailureHook(ref)`, which is null in release builds.
+  - The constructors use Dart 3.13's private named parameters (`this._simulatedFailure`), as
+    `prefer_initializing_formals` asks; callers still write `simulatedFailure:`.
+- `lib/app/app.dart`:
+  - `TracCashApp(initialThemeMode)`.
+  - `themeMode` comes from `themeModeProvider`, falling back to `initialThemeMode`.
+  - `themeAnimationStyle: AnimationStyle.noAnimation`.
+- `lib/main.dart`: `WidgetsFlutterBinding.ensureInitialized()`, then a `ProviderContainer` and
+  `readInitialThemeMode` before `runApp` with `UncontrolledProviderScope`.
+- Theme:
+  - `segmentedButtonTheme`: r12, labelLarge, tonal selection, drawn 48dp through padding, no extra
+    tap padding.
+  - `AppSizes.segmentVerticalPadding` and `AppSizes.segmentChrome`.
+- Mechanical moves, with no behaviour change and no existing test changed:
+  - `dialogAnimation` and the snackbar helper (`_show`, now `showReplacingSnackBar`):
+    `expense_form_dialogs.dart` → `lib/shared/reduced_motion.dart`.
+  - `_DashedBorderPainter`: `category_picker.dart` → `lib/shared/widgets/dashed_border.dart`
+    (`DashedBorderPainter`).
+  - `ExpenseTile`'s `_IconTile` → `lib/shared/widgets/icon_tile.dart` (`IconTile`). This fourth move
+    wasn't in the reviewed list; Settings' rows use the same tile.
+- Fakes: each fake repository takes `simulatedFailure`, checked after its own `failNextWrite`.
+- `test/widget/test_app.dart`:
+  - `TestApp.settings`.
+  - `pumpTestApp` gains `themeMode`, `settingsRepository`, `appVersion` and `overrides`.
+  - It always overrides `appVersionProvider` with `testAppVersion` (`0.1.0 (1)`) and wires the
+    default fakes to `failNextWriteProvider`.
+  - It now seeds after creating the container, still before the first frame.
+- Tests:
+  - New: `test/widget/settings_screen_test.dart` (Ahem), `settings_layout_test.dart` (Plex),
+    `initial_theme_mode_test.dart` and `test/data/simulated_failure_test.dart`.
+  - Removed `test/widget/settings_demo_button_test.dart`; its three cases are now in
+    `settings_screen_test.dart`.
+
 ## Decisions made during implementation
 
 - **Derived colours** (not on the design board), all AA-tested: light errorContainer `#FEE4E2` /
@@ -432,6 +485,57 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
   month name, where the label shows "vs Aug 2026"). Reused from T4: "Couldn’t load expenses",
   "Try again" and "Loading expenses" for Reports' error, trend error and loading states.
 
+- **The theme selection is always the stored value.**
+  - A tap writes the choice, and the segments change when the database stream confirms it.
+  - A failed write leaves them as they were and shows "Couldn’t save your theme choice. Try
+    again."
+  - Rapid taps write in order, so the last one wins.
+- **The stored theme is read before the first frame** (`readInitialThemeMode`, waiting at most
+  1 second). If the read times out or fails, the app follows the device until the value arrives.
+  See DECISIONS.md.
+- **Theme changes have no cross-fade** (`AnimationStyle.noAnimation`): "applies instantly" in
+  DESIGN_SPEC §7, and it also covers reduced motion.
+- **If the theme can't be read**, no segment is selected and the error replaces the helper text.
+  Choosing a mode still saves.
+- **The theme choices stack when a label won't fit on one line** beside the check icon in a third
+  of the width.
+  - The rule uses `AppSizes.segmentChrome`, which matches Flutter's segment padding.
+  - In Plex they share one row from 358dp at text scale 1.0 and from 404dp at 1.3, so 320dp
+    stacks them.
+- **Segments are drawn 48dp high**, as in the design. Flutter ignores `minimumSize` for segments.
+- **Settings rows:** a row with an icon keeps the icon beside the title, as in "Stored on this
+  device"; a row without one centres its switch. The Version value wraps under its title at large
+  text. Each row reads as one item to screen readers.
+- **"Fail the next save" covers every repository write** (expenses, categories, theme), as
+  decided by Bossman.
+  - The demo seeder writes through the database directly, so it ignores the switch.
+  - The switch turns itself off when a write takes the failure, and it resets on restart.
+  - Validation runs first, so an invalid save leaves it on. Reads are never failed.
+  - See DECISIONS.md.
+- **Clear all data resets the Expenses category filter** after it succeeds; otherwise a filter on
+  a deleted category would hide every new expense with no chip to show why. The search text is
+  left alone because it lives in the Expenses screen's controller.
+- **The Developer section shows only when `showDeveloper` is set**, which defaults to `kDebugMode`.
+  Release builds also get a null failure hook, and the seeder returns 0 outside debug.
+- **Riverpod 3 pauses hidden widgets:** a Settings tab under the form or another tab redraws the
+  switch when it is shown again. Tests check it after returning to Settings.
+- **The startup tests use `testWidgets`' fake clock** rather than `fakeAsync`. `fake_async` is only
+  a transitive dependency, and importing it directly would need a dev dependency (to ask about).
+- Copy not in DESIGN_SPEC or 16-settings.png (my wording):
+  - The Developer section: "Developer", "Debug builds only. Not in the release app.", "Adds sample
+    expenses when there are none yet.", "Deletes every expense and every category you created."
+    ("Load demo data", "Clear all data" and "Fail the next save" come from the card;
+    "Simulates a local database error once." from the screenshot.)
+  - The Clear all dialog: "Clear all data?", "Every expense and every category you created will
+    be deleted. The 8 preset categories and your theme setting stay. This can’t be undone.",
+    "Cancel" and "Clear".
+  - "Cleared every expense and the categories you created."
+  - "Couldn’t save your theme choice. Try again." and "Couldn’t load your theme choice, so
+    TracCash is following your device."
+  - "Not available" for the version.
+  - Reused from T3: "Loaded 41 demo expenses.", "Demo data not loaded: there are already
+    expenses." and the `StorageError` message.
+
 ## Known issues / follow-ups
 
 - **Recheck the back button once tabs have nested routes.** The `PopScope` in `AppShell` assumes
@@ -494,6 +598,22 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
   both update, but not in the same frame, so for a few milliseconds they can differ.
 - **Monthly x labels have no year** ("Dec", "Jan", "Feb" across a year boundary); the screen reader
   summary adds years in that case.
+- **The Android launch screen follows the device, not the app's theme.** `values-night/styles.xml`
+  picks the native splash, so with Dark chosen on a light phone the splash is light for a moment
+  before the first (dark) frame. Native launch theming is outside T8.
+- **Settings not yet tapped on a device by the agent**: checked with widget tests (Ahem and Plex)
+  and rendered images compared with 16-settings.png.
+- **The Android build with `package_info_plus` is unverified.** `flutter build apk --debug` failed
+  before compiling anything. The plugin's build script asks Gradle for AGP 8.12.1 (the app uses
+  9.1.0, which is cached), and downloading it failed on this machine with
+  `PKIX path building failed`: Java doesn't trust the certificate it gets for `dl.google.com`.
+  That usually means antivirus HTTPS scanning or a proxy. It failed the same way inside and outside
+  the agent's sandbox. Run the build once the machine can reach Google's Maven repository.
+- **Version reads "0.1.0 (1)" until T10** bumps `version:` in `pubspec.yaml`. The screenshot
+  shows 1.0.0 (1).
+- **`AppSizes.segmentChrome` mirrors Flutter's segment padding** (12 + 16, the 18dp check and
+  an 8dp gap). Recheck it after a Flutter upgrade; `settings_layout_test` catches a label that
+  breaks.
 - ~~`watchValue` hung widget tests that awaited `.first`~~: fixed after T7, along with
   `FakeExpenseRepository.dispose()`. Both awaited Dart's root-zone completed future, which resumed
   the test outside its fake async zone (T7's note blamed `close()`; that was wrong). Covered by

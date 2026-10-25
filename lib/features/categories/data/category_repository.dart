@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:traccash/data/database/database_provider.dart';
+import 'package:traccash/data/database/simulated_failure.dart';
 import 'package:traccash/features/categories/data/drift_category_repository.dart';
 import 'package:traccash/features/categories/domain/category.dart';
 
@@ -29,5 +30,8 @@ abstract interface class CategoryRepository {
 /// Widget tests override this with a fake.
 final Provider<CategoryRepository> categoryRepositoryProvider =
     Provider<CategoryRepository>(
-      (ref) => DriftCategoryRepository(ref.watch(appDatabaseProvider)),
+      (ref) => DriftCategoryRepository(
+        ref.watch(appDatabaseProvider),
+        simulatedFailure: simulatedFailureHook(ref),
+      ),
     );

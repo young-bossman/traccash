@@ -3,6 +3,7 @@ import 'package:traccash/app/theme/app_palette.dart';
 import 'package:traccash/app/theme/app_spacing.dart';
 import 'package:traccash/features/categories/domain/category.dart';
 import 'package:traccash/features/categories/presentation/category_icons.dart';
+import 'package:traccash/shared/widgets/dashed_border.dart';
 
 /// The form's category choice: two columns of options, then "+ New
 /// category".
@@ -170,7 +171,7 @@ class _NewCategoryOption extends StatelessWidget {
       container: true,
       button: true,
       child: CustomPaint(
-        foregroundPainter: _DashedBorderPainter(
+        foregroundPainter: DashedBorderPainter(
           color: scheme.outline,
           radius: AppRadius.r12,
         ),
@@ -227,40 +228,4 @@ class _OptionContent extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Flutter has no dashed border, so the "New category" outline is drawn
-/// along a rounded rectangle path.
-class _DashedBorderPainter extends CustomPainter {
-  const _DashedBorderPainter({required this.color, required this.radius});
-
-  final Color color;
-  final Radius radius;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    // Inset by half the stroke so the line sits inside the bounds.
-    final outline = Path()
-      ..addRRect(
-        RRect.fromRectAndRadius((Offset.zero & size).deflate(0.5), radius),
-      );
-    for (final metric in outline.computeMetrics()) {
-      var distance = 0.0;
-      while (distance < metric.length) {
-        canvas.drawPath(
-          metric.extractPath(distance, distance + AppSizes.dash),
-          paint,
-        );
-        distance += AppSizes.dash + AppSizes.dashGap;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DashedBorderPainter oldDelegate) =>
-      oldDelegate.color != color || oldDelegate.radius != radius;
 }

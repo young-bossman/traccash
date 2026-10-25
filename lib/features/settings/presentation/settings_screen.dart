@@ -1,66 +1,44 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:traccash/app/theme/app_spacing.dart';
-import 'package:traccash/core/errors/app_error.dart';
-import 'package:traccash/data/database/demo_seed.dart';
+import 'package:traccash/features/settings/presentation/settings_appearance.dart';
+import 'package:traccash/features/settings/presentation/settings_developer.dart';
+import 'package:traccash/features/settings/presentation/settings_general.dart';
 
-/// Placeholder until the Settings task builds the real screen.
+/// Theme choice, app facts, and debug tools in debug builds (16-settings.png).
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({this.showDeveloper = kDebugMode, super.key});
+
+  /// Whether the Developer section shows. Release builds never show it;
+  /// tests turn it off to see what release users get.
+  final bool showDeveloper;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Padding(
+        // Scrolls once large text makes the page taller than the screen.
+        child: ListView(
           padding: const EdgeInsets.all(AppSpacing.s20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Semantics(
-                header: true,
-                child: Text(
-                  'Settings',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
+          children: [
+            Semantics(
+              header: true,
+              child: Text(
+                'Settings',
+                style: Theme.of(context).textTheme.titleLarge,
               ),
-              // Temporary; T8's Developer section replaces it.
-              if (kDebugMode) ...[
-                const SizedBox(height: AppSpacing.s20),
-                const _LoadDemoDataButton(),
-              ],
+            ),
+            const SizedBox(height: AppSpacing.s28),
+            const AppearanceSection(),
+            const SizedBox(height: AppSpacing.s28),
+            const GeneralSection(),
+            if (showDeveloper) ...[
+              const SizedBox(height: AppSpacing.s28),
+              const DeveloperSection(),
             ],
-          ),
+          ],
         ),
       ),
     );
-  }
-}
-
-class _LoadDemoDataButton extends ConsumerWidget {
-  const _LoadDemoDataButton();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return FilledButton.tonal(
-      onPressed: () => _load(context, ref),
-      child: const Text('Load demo data'),
-    );
-  }
-
-  Future<void> _load(BuildContext context, WidgetRef ref) async {
-    String message;
-    try {
-      final added = await ref.read(demoSeederProvider)();
-      message = added == 0
-          ? 'Demo data not loaded: there are already expenses.'
-          : 'Loaded $added demo expenses.';
-    } on AppError catch (error) {
-      message = error.message;
-    }
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
   }
 }

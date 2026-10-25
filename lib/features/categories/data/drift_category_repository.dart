@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:traccash/core/errors/app_error.dart';
 import 'package:traccash/data/database/app_database.dart';
 import 'package:traccash/data/database/db_errors.dart';
+import 'package:traccash/data/database/simulated_failure.dart';
 import 'package:traccash/features/categories/data/category_repository.dart';
 import 'package:traccash/features/categories/domain/category.dart';
 import 'package:traccash/features/categories/domain/category_validation.dart';
@@ -19,11 +20,16 @@ Category categoryFromRow(CategoryRow row) => Category(
 );
 
 class DriftCategoryRepository implements CategoryRepository {
-  DriftCategoryRepository(this._db, {DateTime Function()? clock})
-    : _clock = clock ?? DateTime.now;
+  /// [simulatedFailure] is the debug "Fail the next save" hook.
+  DriftCategoryRepository(
+    this._db, {
+    DateTime Function()? clock,
+    this._simulatedFailure,
+  }) : _clock = clock ?? DateTime.now;
 
   final AppDatabase _db;
   final DateTime Function() _clock;
+  final bool Function()? _simulatedFailure;
 
   SimpleSelectStatement<$CategoriesTable, CategoryRow> _ordered() =>
       _db.select(_db.categories)..orderBy([
@@ -54,6 +60,7 @@ class DriftCategoryRepository implements CategoryRepository {
       // One transaction, so nothing can slip in between the duplicate check
       // and the insert.
       () => _db.transaction(() async {
+        throwIfSimulated(_simulatedFailure);
         final all = (await _ordered().get()).map(categoryFromRow).toList();
         final existing = findCategoryNamed(normalized, all);
         if (existing != null) {
@@ -97,6 +104,7 @@ class DriftCategoryRepository implements CategoryRepository {
 
   @override
   Future<void> archive(int id) => guardDb(() async {
+    throwIfSimulated(_simulatedFailure);
     final changed =
         await (_db.update(_db.categories)..where((c) => c.id.equals(id))).write(
           const CategoriesCompanion(isArchived: Value(true)),

@@ -3,6 +3,7 @@ import 'package:traccash/core/errors/app_error.dart';
 import 'package:traccash/core/formatting/dates.dart';
 import 'package:traccash/data/database/app_database.dart';
 import 'package:traccash/data/database/db_errors.dart';
+import 'package:traccash/data/database/simulated_failure.dart';
 import 'package:traccash/features/categories/data/drift_category_repository.dart';
 import 'package:traccash/features/categories/domain/category.dart';
 import 'package:traccash/features/expenses/data/expense_repository.dart';
@@ -11,16 +12,19 @@ import 'package:traccash/features/expenses/domain/expense_validation.dart';
 
 class DriftExpenseRepository implements ExpenseRepository {
   /// [today] and [clock] are injectable so tests control "now".
+  /// [simulatedFailure] is the debug "Fail the next save" hook.
   DriftExpenseRepository(
     this._db, {
     LocalDate Function()? today,
     DateTime Function()? clock,
+    this._simulatedFailure,
   }) : _today = today ?? LocalDate.today,
        _clock = clock ?? DateTime.now;
 
   final AppDatabase _db;
   final LocalDate Function() _today;
   final DateTime Function() _clock;
+  final bool Function()? _simulatedFailure;
 
   $ExpensesTable get _expenses => _db.expenses;
 
@@ -130,6 +134,7 @@ class DriftExpenseRepository implements ExpenseRepository {
       final category = await _findCategory(clean.categoryId);
       final invalidCategory = validateExpenseCategory(category);
       if (invalidCategory != null) throw invalidCategory;
+      throwIfSimulated(_simulatedFailure);
 
       final now = _clock().toUtc();
       final id = await _db
@@ -169,6 +174,7 @@ class DriftExpenseRepository implements ExpenseRepository {
         currentCategoryId: existing.category.id,
       );
       if (invalidCategory != null) throw invalidCategory;
+      throwIfSimulated(_simulatedFailure);
 
       final now = _clock().toUtc();
       await (_db.update(_expenses)..where((e) => e.id.equals(id))).write(
@@ -196,6 +202,7 @@ class DriftExpenseRepository implements ExpenseRepository {
     () => _db.transaction(() async {
       final existing = await _findById(id);
       if (existing == null) throw const ExpenseNotFoundError();
+      throwIfSimulated(_simulatedFailure);
       await (_db.delete(_expenses)..where((e) => e.id.equals(id))).go();
       return existing;
     }),
@@ -215,6 +222,7 @@ class DriftExpenseRepository implements ExpenseRepository {
         currentCategoryId: expense.category.id,
       );
       if (invalidCategory != null) throw invalidCategory;
+      throwIfSimulated(_simulatedFailure);
 
       // An explicit id is safe: AUTOINCREMENT never gave it to another row.
       // A plain insert (not insert-or-ignore) keeps CHECK failures loud.
@@ -238,6 +246,7 @@ class DriftExpenseRepository implements ExpenseRepository {
   @override
   Future<void> clearAll() => guardDb(
     () => _db.transaction(() async {
+      throwIfSimulated(_simulatedFailure);
       // Expenses first: the foreign key would block deleting their
       // categories.
       await _db.delete(_expenses).go();

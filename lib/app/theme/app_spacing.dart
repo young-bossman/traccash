@@ -129,6 +129,16 @@ abstract final class AppSizes {
 
   /// The bar under each row of Reports' category table.
   static const double shareBarHeight = 6;
+
+  /// Above and below a segment's label, so its 20dp line makes a segment
+  /// [buttonHeight] high.
+  static const double segmentVerticalPadding = (buttonHeight - 20) / 2;
+
+  /// What a theme segment in Settings needs beside its label at text scale
+  /// 1.0: Flutter's segment padding (12 + 16), the check icon (18) and the
+  /// gap after it (8). At larger text Flutter shrinks the padding, so this
+  /// errs on the wide side. The segments stack when a label won't fit.
+  static const double segmentChrome = 54;
 }
 
 /// The design allows a single shadow level, reserved for floating layers

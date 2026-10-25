@@ -247,3 +247,46 @@ text (GH₵ 5,000,000 at 2.0 on a 320dp phone), that width alone exceeded the ch
 title row overflowed. The labels' column is capped at 40% of the chart's width
 (`AppSizes.chartAxisMaxShare`) and labels past it scale down, keeping every digit. Cost: tiny
 labels in that extreme case.
+
+**2026-10-25 · package_info_plus for the version** — Settings shows the version Android reports
+for the installed app, and Flutter has no API for it. The alternative was a hand-written
+MethodChannel in `MainActivity.kt`, which means native code to maintain. Bossman approved
+`package_info_plus` (one call, `PackageInfo.fromPlatform()`). Cost: `pubspec.lock` gains
+`http`, `win32` and `ffi_leak_tracker`, which only other platforms use. The plugin adds no Android
+permission. `appVersionProvider` wraps the call, so widget tests never touch the platform.
+
+**2026-10-25 · Stored theme read before the first frame** — With the theme read only by a
+provider, the first frames used the device's brightness and then switched once the database
+opened, so a Dark choice on a light phone opened light for a moment. `main()` now calls
+`readInitialThemeMode`, which listens to `themeModeProvider` for at most 1 second before `runApp`
+and passes the result to `TracCashApp`. It listens rather than reads because Riverpod 3 pauses a
+stream provider that nothing listens to. On a timeout or any error it returns System and, in
+debug builds, logs only the error type. The app then follows the device until the stream
+delivers, and Settings shows a read error if there was one. Cost: startup waits for the database
+to open (milliseconds normally; never more than 1 second).
+
+**2026-10-25 · "Fail the next save" as a repository hook** — The card asks for a debug switch that
+makes the next repository write throw once, against the real Drift repositories. Each Drift
+repository takes an optional `bool Function()? simulatedFailure`. Every write calls it after
+validation and before writing, and throws `StorageError` when it returns true. The repository
+providers pass `failNextWriteProvider`'s `take` in debug builds and null in release, so release
+code has nothing that can fail a write on purpose. It covers every repository write (expenses,
+categories, theme; decided by Bossman). The seeder isn't a repository and ignores it. The fakes
+take the same hook, so a widget test can arm it from the Settings switch and see screen 12's
+banner. Decorators around each repository were the alternative; they would have repeated every
+method of three contracts. Cost: three production classes carry a debug-only parameter.
+
+**2026-10-25 · Theme choices stack when a label won't fit** — Three equal segments in a 280dp
+column (320dp phone) leave about 93dp each, and "System" plus the check icon and Flutter's padding
+needs about 106dp in Plex, so Flutter broke the word ("Syste/m"). Settings measures the widest
+label and stacks the segments vertically when it won't fit beside the check in a third of the
+width. In Plex they share one row from 358dp at text scale 1.0. Hiding the check instead would
+leave selection shown by colour alone. Cost: on 320dp phones the three choices take 144dp of
+height.
+
+**2026-10-25 · Clear all data resets the category filter** — The Expenses filter is provider state
+that survives tab switches. Clearing all data deletes custom categories. A filter left on one would
+hide every new expense, and since the chip only shows for a category that exists, nothing would
+say why. After a successful clear, Settings sets the category filter back to all categories. The
+search text is left alone: it lives in the Expenses screen's text controller, and clearing only the
+provider would leave the field showing text that no longer filters.

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:traccash/core/formatting/dates.dart';
 import 'package:traccash/data/database/database_provider.dart';
+import 'package:traccash/data/database/simulated_failure.dart';
 import 'package:traccash/features/expenses/data/drift_expense_repository.dart';
 import 'package:traccash/features/expenses/domain/expense.dart';
 
@@ -45,5 +46,8 @@ abstract interface class ExpenseRepository {
 /// Widget tests override this with a fake.
 final Provider<ExpenseRepository> expenseRepositoryProvider =
     Provider<ExpenseRepository>(
-      (ref) => DriftExpenseRepository(ref.watch(appDatabaseProvider)),
+      (ref) => DriftExpenseRepository(
+        ref.watch(appDatabaseProvider),
+        simulatedFailure: simulatedFailureHook(ref),
+      ),
     );
