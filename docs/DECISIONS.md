@@ -41,3 +41,19 @@ stops Android cloud backup, so the database is never uploaded. Android 12+ devic
 transfer ignores that flag and can still copy app data to a new phone. Accepted for v1: with no
 export or sync, it is the only way users keep their expenses when changing phones, and the data
 stays on hardware the user owns. Revisit when export is added.
+
+**2026-10-25 · Amount input length and overflow guard** — Very long digit strings must not
+overflow `int.parse`, and the error shown should name the real problem. Trimmed input over 20
+characters is rejected as invalid format before any other check (nothing valid needs more:
+`1,000,000.00` is 12). Leading zeros are stripped from the cedis as a string, and more than 7
+significant digits returns "at most GH₵ 1,000,000.00" rather than "invalid format", because that is
+why it failed. Replaces the earlier "more than 9 cedi digits is invalid format" rule.
+
+**2026-10-25 · First thousands group may not start with 0** — `0,500` and `000,000` would otherwise
+pass the grouping rule and be read as 500 and 0 cedis, though the user probably meant 0.50.
+Rejected with the misplaced-comma message instead of guessing.
+
+**2026-10-25 · Load en_GB date data in `main()`** — `DateFormat` throws until locale data is
+loaded, and `flutter_localizations` only loads it once `MaterialApp` builds. `main()` awaits
+`initializeDateFormatting('en_GB')` before `runApp`, so formatting is safe from startup code too.
+Unit tests do the same in `setUpAll`.

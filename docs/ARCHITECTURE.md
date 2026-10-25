@@ -168,16 +168,18 @@ Every write is awaited; `unawaited_futures` is an analyzer error. After any `awa
 | Surrounding whitespace | Trimmed |
 | Empty | Error: required |
 | Digits, optionally `.` and 1–2 digits (`25`, `25.5`, `25.50`, `007`) | Accepted; leading zeros allowed |
-| Thousands grouping in the cedis part (`1,000`, `1,000.50`, `1,000,000`) | Accepted: first group 1–3 digits, every later group exactly 3 |
-| Any other comma (`12,50`, `1,00`, `1000,000`, `1.000,50`) | Error: "Use a dot for pesewas, for example 12.50." Never guessed. |
+| Thousands grouping in the cedis part (`1,000`, `1,000.50`, `1,000,000`) | Accepted: first group 1–3 digits not starting with 0, every later group exactly 3 |
+| Any other comma (`12,50`, `1,00`, `1000,000`, `1.000,50`, `0,500`) | Error: "Use a dot for pesewas, for example 12.50." Never guessed. |
 | More than 2 decimals (`1.234`) | Error: too many decimals |
 | Leading or trailing point (`.5`, `12.`), signs, letters, other symbols | Error: invalid format |
-| More than 9 cedi digits | Error: invalid format (rejected before integer parsing, so no overflow) |
+| Longer than 20 characters after trimming | Error: invalid format (checked before anything else) |
+| More than 7 cedi digits after removing leading zeros (`999999999999`) | Error: at most GH₵ 1,000,000.00 (rejected before integer parsing, so no overflow) |
 | Zero (`0`, `0.00`) | Error: must be more than GH₵ 0.00 |
 | Over the cap (`1000000.01`) | Error: at most GH₵ 1,000,000.00 |
 
-Algorithm: validate the shape, remove grouping commas, split on `.`, then compute
-`cedis * 100 + pesewas` with integers (`"5"` after the point means 50 pesewas). Never
+Algorithm: check the length, validate the shape, remove grouping commas, split on `.`, strip
+leading zeros from the cedis as a string (an empty result means 0 cedis; more than 7 digits left
+means over the cap), then compute `cedis * 100 + pesewas` with integers (`"5"` after the point means 50 pesewas). Never
 `double.parse(x) * 100`: `0.29 * 100` is `28.999…` in floating point.
 
 ### Invariants
