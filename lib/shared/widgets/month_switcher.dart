@@ -3,6 +3,35 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:traccash/app/theme/app_spacing.dart';
 import 'package:traccash/shared/selected_month.dart';
 
+/// A screen title with the month switcher at the end of its line, for
+/// Expenses and Reports. The switcher wraps under the title when large text
+/// leaves no room beside it.
+class TitleWithMonthSwitcher extends StatelessWidget {
+  const TitleWithMonthSwitcher({required this.title, super.key});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    // Full width because a Wrap given a loose width shrinks to its children,
+    // leaving spaceBetween nothing to spread.
+    return SizedBox(
+      width: double.infinity,
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Semantics(
+            header: true,
+            child: Text(title, style: Theme.of(context).textTheme.titleLarge),
+          ),
+          const MonthSwitcher(),
+        ],
+      ),
+    );
+  }
+}
+
 /// Previous / month / next, driving [selectedMonthProvider]. Next is disabled
 /// at the current month because future months can't have expenses.
 class MonthSwitcher extends ConsumerWidget {

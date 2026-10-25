@@ -9,6 +9,7 @@ final RegExp _isoDate = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$');
 final DateFormat _numericDate = DateFormat('dd/MM/yyyy', dateLocale);
 final DateFormat _longDate = DateFormat('EEEE, d MMMM y', dateLocale);
 final DateFormat _monthLabel = DateFormat('MMMM y', dateLocale);
+final DateFormat _monthName = DateFormat('MMMM', dateLocale);
 final DateFormat _dayHeading = DateFormat('EEEE, d MMMM', dateLocale);
 final DateFormat _dayAndMonth = DateFormat('d MMMM', dateLocale);
 final DateFormat _dayMonthYear = DateFormat('d MMMM y', dateLocale);
@@ -155,6 +156,9 @@ final class CalendarMonth {
 
   /// `October 2026`.
   String get label => _monthLabel.format(DateTime.utc(year, month));
+
+  /// `October`, for sentences where the year is already clear.
+  String get name => _monthName.format(DateTime.utc(year, month));
 
   /// `Oct 2026`, for the month switcher.
   String get shortLabel => '${shortMonthName(month)} $year';

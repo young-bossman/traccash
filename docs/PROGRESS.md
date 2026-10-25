@@ -10,7 +10,7 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
 - [x] T4 · Expenses page
 - [x] T5 · Add / edit expense page
 - [x] T6 · Home page
-- [ ] T7 · Reports page
+- [x] T7 · Reports page
 - [ ] T8 · Settings page
 - [ ] T9 · Hardening
 - [ ] T10 · Release prep
@@ -199,6 +199,38 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
     spending in September 2026." Tests in `home_state_test.dart` and `home_screen_test.dart`.
   - `category_filter_sheet.dart`: the class comment says "the selected month".
 
+### T7 · Reports page (2026-10-25)
+
+- Calculations, written test-first: `lib/core/calculations/average.dart` (`averagePerDayPesewas`),
+  `trend.dart` (`trendMonthCount`, `dailyTotals`, `trendWindowStart`, `trendMonths`,
+  `monthlyTotals`), `chart_scale.dart` (`chartAxisMaxPesewas`, `chartAxisIntervalPesewas`).
+  `breakdown.dart`: `CategoryTotal.expenseCount`.
+- Formatting: `money.dart` `formatGhsAxis` (`GH₵ 2,500`, or `GH₵ 1.25` when not whole cedis);
+  `dates.dart` `CalendarMonth.name` (`October`); new `lists.dart` `joinWithAnd` (Home's private
+  `_joinNames`, now shared).
+- `lib/features/reports/presentation/`: `reports_providers.dart` (`trendPeriodProvider`,
+  `trendExpensesProvider`, `firstExpenseDateProvider`, `CategoryShare`, `MonthlyTrend`,
+  `ReportsView`, `reportsViewProvider`), `reports_screen.dart` (rewritten: header, loading, error,
+  no data, body), `reports_summary.dart` (`ReportsTotal`, `ReportsStats`, `LargestCategoryCard`),
+  `reports_categories.dart` (`ReportsCategories`), `reports_trend.dart` (`ReportsTrend`, the
+  `BarChart`). The no-data state is a private widget in `reports_screen.dart` rather than the
+  planned `reports_empty.dart`.
+- Mechanical moves, no behaviour change, no existing test edited: `HomeCard` →
+  `lib/shared/widgets/section_card.dart` `SectionCard`; Home's `_TotalAmount` →
+  `lib/shared/widgets/total_amount.dart` `TotalAmount`; the title + month switcher `Wrap` from
+  `expenses_header.dart` → `TitleWithMonthSwitcher` in `month_switcher.dart`;
+  `comparisonRangeProvider` and `previousPeriodTotalProvider` from `home_providers.dart` →
+  `expenses_providers.dart`.
+- `lib/shared/text_measure.dart`: `singleLineHeight`.
+- Theme: `AppSizes.trendChartHeight`, `dailyBarMaxWidth`, `monthlyBarWidth`, `barSlotFill`,
+  `chartGridLine`, `chartAxisMaxShare`, `shareBarHeight`; `AppRadius.chartBar`;
+  `AppMotion.chartUpdate`.
+- Not changed: `expense_repository.dart`, `drift_expense_repository.dart`, `test/fakes/`,
+  `lib/data/database/`.
+- Tests: `test/unit/average_test.dart`, `trend_test.dart`, `chart_scale_test.dart`,
+  `reports_state_test.dart`, `lists_test.dart`, a `CalendarMonth.name` case in `dates_test.dart`;
+  `test/widget/reports_screen_test.dart` (Ahem), `reports_layout_test.dart` (Plex).
+
 ## Decisions made during implementation
 
 - **Derived colours** (not on the design board), all AA-tested: light errorContainer `#FEE4E2` /
@@ -369,6 +401,37 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
   (replacing T4's "Nothing was recorded for this month."). Reused from T4: "No expenses in
   October 2026", "Couldn’t load expenses", "Try again", "Loading expenses".
 
+- **Reports lays out as 10 and 11**, with the trend below By category (Bossman): header, total,
+  stats row, Largest category, By category, Spending trend.
+- **The comparison stat uses signs** (`+GH₵ 1,234.00`, `−GH₵ 3,257.10`, `GH₵ 0.00`, `No data`), read
+  in words by screen readers. Past months show `vs Aug 2026`. See DECISIONS.md.
+- **If the compared days can't be read, the stat is left out** rather than showing "No data", which
+  would claim there is nothing to compare. Same rule as Home's compare line.
+- **Only the monthly chart shows a trend failure.** The month's own figures, the daily chart and the
+  table don't depend on the 6-month read.
+- **Daily bars are all accent; Monthly marks the selected month** in accent with a w600 label, earlier
+  months in bar-muted (Bossman, from the prototype). Days or months with nothing have no bar.
+- **The trend toggle is provider state**, because a month change rebuilds the page through the
+  spinner and would reset widget state. It survives month changes and tab switches; it resets on
+  restart.
+- **`firstExpenseDate` is read again whenever the trend's stream emits.** See DECISIONS.md.
+- **Stats columns are sized to their content**, with spare width shared equally, and stack one per
+  line when they don't fit. See DECISIONS.md. In Plex at text scale 1.0 they share one line from
+  360dp up.
+- **Chart money labels take at most 40% of the chart's width** and shrink past that. See
+  DECISIONS.md.
+- **The average divides a month after today by all its days.** That only happens if the device
+  clock is set back; it was an assert, which would have shown Reports' error state in debug.
+- **The chart is redrawn without a cross-fade when switching Daily / Monthly** (each has its own
+  key), so 31 bars never morph into 6. Bars animate to new totals over 150 ms (fl_chart's default),
+  and not at all under reduced motion.
+- Copy in neither the screenshots nor the card (my wording): "Largest categories" with "each" under
+  the amount on a tie, and a neutral `leaderboard_outlined` icon in the tile; the daily summary on a
+  tie, "Highest days: 5 October and 8 October, GH₵ 450.00 each."; the past-year day in a summary
+  ("9 March 2025"); the spoken period for a past month, "GH₵ 571.00 more than August 2026" (full
+  month name, where the label shows "vs Aug 2026"). Reused from T4: "Couldn’t load expenses",
+  "Try again" and "Loading expenses" for Reports' error, trend error and loading states.
+
 ## Known issues / follow-ups
 
 - **Recheck the back button once tabs have nested routes.** The `PopScope` in `AppShell` assumes
@@ -381,9 +444,8 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
 - **Asserts are debug-only.** `LocalDate(2026, 2, 30)` and `formatGhs(-1)` are caught in
   debug and tests but not in release. Resolved for stored data in T3: the type converter reads via
   `parseIso`. Forms must still build `LocalDate`s from the date picker or validated input.
-- **T7: `firstExpenseDate()` is a one-off `Future`.** If the user adds an expense dated before the
-  first record while Reports is open, the trend's start month stays stale until Reports reads it
-  again. Re-read it when the month's data changes, or add a `watch` variant then.
+- ~~T7: `firstExpenseDate()` is a one-off `Future`~~: resolved in T7 by reading it again whenever
+  the trend's stream emits (relies on Drift; see DECISIONS.md).
 - ~~T5: the note and category-name fields must count code points~~: resolved in T5 by
   `RuneLengthLimitingTextInputFormatter`.
 - **`--delete-conflicting-outputs` is ignored** by the installed build_runner (it prints "These
@@ -425,3 +487,14 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
   in the bar's Semantics summary, so nothing depends on the colour.
 - **View all keeps any active Expenses filter** (decided); the chip on Expenses shows it.
 - **Home not yet tapped on a device by the agent**: checked with widget tests (Ahem and Plex).
+- **Reports not yet tapped on a device by the agent**: checked with widget tests (Ahem and Plex).
+- **Try again on a trend-only failure reloads the whole Reports page** (spinner, then the page
+  again, scrolled to the top). Rare: the 6-month read failing while the month's own read works.
+- **The selected month's monthly bar and the headline total come from two streams.** After a write
+  both update, but not in the same frame, so for a few milliseconds they can differ.
+- **Monthly x labels have no year** ("Dec", "Jan", "Feb" across a year boundary); the screen reader
+  summary adds years in that case.
+- **`watchValue` in `test/fakes/fake_streams.dart` never completes `.first`**: its `onCancel`
+  awaits `controller.close()`, whose future only completes after `onCancel` returns. Riverpod never
+  awaits a cancel, so the app is unaffected; tests read through providers instead. Not fixed in
+  T7 because `test/fakes/` was to stay unchanged.

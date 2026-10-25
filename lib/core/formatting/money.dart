@@ -119,6 +119,17 @@ String formatGhs(int pesewas) {
   return '$ghsSymbol ${parts.cedis}${parts.pesewas}';
 }
 
+/// A chart axis label: `GH₵ 2,500` for a whole number of cedis, otherwise
+/// with pesewas like [formatGhs] (`GH₵ 1.25`), so a label is never rounded
+/// to a different amount.
+///
+/// [pesewas] must not be negative.
+String formatGhsAxis(int pesewas) {
+  assert(pesewas >= 0, 'formatGhsAxis takes a non-negative amount');
+  if (pesewas % 100 != 0) return formatGhs(pesewas);
+  return '$ghsSymbol ${_cediGrouping.format(pesewas ~/ 100)}';
+}
+
 /// Pesewas as the amount field shows them for editing: `4800.00`.
 ///
 /// No grouping commas, so deleting one digit can't leave a misplaced comma

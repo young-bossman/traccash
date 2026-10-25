@@ -276,6 +276,12 @@ void main() {
       expect(const CalendarMonth(2027, 1).shortLabel, 'Jan 2027');
     });
 
+    test('month name without the year', () {
+      expect(const CalendarMonth(2026, 9).name, 'September');
+      expect(const CalendarMonth(2026, 10).name, 'October');
+      expect(const CalendarMonth(2027, 1).name, 'January');
+    });
+
     test('day heading has the weekday and month but no year', () {
       expect(formatDayHeading(LocalDate(2026, 10, 19)), 'Monday, 19 October');
       expect(formatDayHeading(LocalDate(2027, 1, 1)), 'Friday, 1 January');

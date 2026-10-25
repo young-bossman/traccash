@@ -3,35 +3,16 @@ import 'package:traccash/core/calculations/breakdown.dart';
 import 'package:traccash/core/calculations/comparison.dart';
 import 'package:traccash/core/calculations/ledger.dart';
 import 'package:traccash/core/formatting/dates.dart';
+import 'package:traccash/core/formatting/lists.dart';
 import 'package:traccash/core/formatting/money.dart';
 import 'package:traccash/core/formatting/percent.dart';
 import 'package:traccash/features/categories/domain/category.dart';
-import 'package:traccash/features/expenses/data/expense_repository.dart';
 import 'package:traccash/features/expenses/domain/expense.dart';
 import 'package:traccash/features/expenses/presentation/expenses_providers.dart';
 import 'package:traccash/shared/selected_month.dart';
 
 /// Rows in Home's Recent list.
 const int recentCount = 5;
-
-/// The days of the previous month the selected month is compared with.
-final Provider<DateRange> comparisonRangeProvider = Provider<DateRange>(
-  (ref) => comparisonRange(
-    ref.watch(selectedMonthProvider),
-    today: ref.watch(todayProvider),
-  ),
-);
-
-/// Spending in [comparisonRangeProvider]'s days.
-final StreamProvider<int> previousPeriodTotalProvider = StreamProvider<int>((
-  ref,
-) {
-  final range = ref.watch(comparisonRangeProvider);
-  return ref
-      .watch(expenseRepositoryProvider)
-      .watchBetween(range.from, range.to)
-      .map(sumPesewas);
-}, retry: noRetry);
 
 /// Everything Home shows below the month switcher, for one month.
 final class HomeView {
@@ -116,7 +97,8 @@ final class HomeView {
     if (slices.isEmpty) return null;
     final top = slices.first;
     if (largest.length > 1) {
-      return '${_joinNames(largest)} share the largest amount, '
+      final names = joinWithAnd([for (final c in largest) c.name]);
+      return '$names share the largest amount, '
           '${formatGhs(top.totalPesewas)} each.';
     }
     final name = largest.single.name;
@@ -142,13 +124,6 @@ final class HomeView {
   /// `Today`, `Yesterday` or `19 Oct`, after the note in a Recent row.
   String recentDateLabel(Expense expense) =>
       shortDayLabel(expense.occurredOn, today: today);
-}
-
-/// "Food and Transport", "Food, Transport and Bills".
-String _joinNames(List<Category> categories) {
-  final names = [for (final c in categories) c.name];
-  if (names.length < 2) return names.join();
-  return '${names.sublist(0, names.length - 1).join(', ')} and ${names.last}';
 }
 
 /// Loading until the month's expenses (and the comparison, so the line

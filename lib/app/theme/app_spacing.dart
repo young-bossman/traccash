@@ -33,6 +33,9 @@ abstract final class AppRadius {
   /// board's scale.
   static const Radius swatch = Radius.circular(2);
 
+  /// Top corners of a chart bar; bars are too thin for r8.
+  static const Radius chartBar = Radius.circular(2);
+
   /// Fields, chips, snackbar.
   static const Radius r8 = Radius.circular(8);
 
@@ -104,6 +107,28 @@ abstract final class AppSizes {
 
   /// Icon at the start of an inline error message.
   static const double inlineIcon = 18;
+
+  /// Reports' trend chart, axis labels included.
+  static const double trendChartHeight = 200;
+
+  /// Widest a daily bar gets; 31 of them share the chart's width.
+  static const double dailyBarMaxWidth = 8;
+
+  /// Widest a monthly bar gets.
+  static const double monthlyBarWidth = 24;
+
+  /// Share of each bar's slot the bar fills, leaving the rest as the gap.
+  static const double barSlotFill = 0.6;
+
+  /// The chart's horizontal grid lines, as thin as a divider.
+  static const double chartGridLine = 1;
+
+  /// Most of the chart's width its money labels may take. Past it (huge
+  /// totals at large text) they shrink, so the bars keep the rest.
+  static const double chartAxisMaxShare = 0.4;
+
+  /// The bar under each row of Reports' category table.
+  static const double shareBarHeight = 6;
 }
 
 /// The design allows a single shadow level, reserved for floating layers

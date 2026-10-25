@@ -39,23 +39,7 @@ class ExpensesHeader extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Wraps the switcher under the title when large text leaves no
-          // room beside it. Full width because a Wrap given a loose width
-          // shrinks to its children, leaving spaceBetween nothing to spread.
-          SizedBox(
-            width: double.infinity,
-            child: Wrap(
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Semantics(
-                  header: true,
-                  child: Text('Expenses', style: theme.textTheme.titleLarge),
-                ),
-                const MonthSwitcher(),
-              ],
-            ),
-          ),
+          const TitleWithMonthSwitcher(title: 'Expenses'),
           const SizedBox(height: AppSpacing.s4),
           // While loading, the line keeps its height but shows no figures,
           // so a new month's label never sits over the old month's total.

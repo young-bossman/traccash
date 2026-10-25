@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show FutureProviderFamily;
+import 'package:traccash/core/calculations/comparison.dart';
 import 'package:traccash/core/calculations/ledger.dart';
 import 'package:traccash/core/formatting/dates.dart';
 import 'package:traccash/core/formatting/money.dart';
@@ -24,6 +25,26 @@ final StreamProvider<List<Expense>> monthExpensesProvider =
           .watchMonth(ref.watch(selectedMonthProvider)),
       retry: noRetry,
     );
+
+/// The days of the previous month the selected month is compared with, on
+/// Home and Reports.
+final Provider<DateRange> comparisonRangeProvider = Provider<DateRange>(
+  (ref) => comparisonRange(
+    ref.watch(selectedMonthProvider),
+    today: ref.watch(todayProvider),
+  ),
+);
+
+/// Spending in [comparisonRangeProvider]'s days.
+final StreamProvider<int> previousPeriodTotalProvider = StreamProvider<int>((
+  ref,
+) {
+  final range = ref.watch(comparisonRangeProvider);
+  return ref
+      .watch(expenseRepositoryProvider)
+      .watchBetween(range.from, range.to)
+      .map(sumPesewas);
+}, retry: noRetry);
 
 /// False until the first expense is saved, in any month.
 final StreamProvider<bool> hasAnyExpensesProvider = StreamProvider<bool>(

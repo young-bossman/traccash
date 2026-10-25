@@ -3,10 +3,17 @@ import 'package:traccash/features/expenses/domain/expense.dart';
 
 /// One category's spending across a list of expenses.
 final class CategoryTotal {
-  const CategoryTotal({required this.category, required this.totalPesewas});
+  const CategoryTotal({
+    required this.category,
+    required this.totalPesewas,
+    required this.expenseCount,
+  });
 
   final Category category;
   final int totalPesewas;
+
+  /// How many expenses make up [totalPesewas].
+  final int expenseCount;
 }
 
 /// One part of Home's breakdown bar and legend: a single category, or the
@@ -42,14 +49,20 @@ const int _namedSlices = 3;
 /// never depends on which expense happened to be entered first.
 List<CategoryTotal> categoryTotals(Iterable<Expense> expenses) {
   final pesewas = <int, int>{};
+  final counts = <int, int>{};
   final categories = <int, Category>{};
   for (final e in expenses) {
     pesewas[e.category.id] = (pesewas[e.category.id] ?? 0) + e.amountPesewas;
+    counts[e.category.id] = (counts[e.category.id] ?? 0) + 1;
     categories[e.category.id] = e.category;
   }
   final totals = [
     for (final MapEntry(key: id, value: total) in pesewas.entries)
-      CategoryTotal(category: categories[id]!, totalPesewas: total),
+      CategoryTotal(
+        category: categories[id]!,
+        totalPesewas: total,
+        expenseCount: counts[id]!,
+      ),
   ];
   return totals..sort((a, b) {
     var c = b.totalPesewas.compareTo(a.totalPesewas);

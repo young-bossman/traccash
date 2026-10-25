@@ -15,6 +15,19 @@ double singleLineWidth(BuildContext context, String text, TextStyle style) {
   return width;
 }
 
+/// Height of one line in [style], at the user's text size.
+double singleLineHeight(BuildContext context, TextStyle style) {
+  final painter = TextPainter(
+    text: TextSpan(text: ' ', style: style),
+    textDirection: Directionality.of(context),
+    textScaler: MediaQuery.textScalerOf(context),
+    maxLines: 1,
+  )..layout();
+  final height = painter.height;
+  painter.dispose();
+  return height;
+}
+
 /// [AppSizes.ledgerMinTextWidth] grown with the user's text size: the
 /// narrowest a name may get beside an amount before the amount moves to its
 /// own line.

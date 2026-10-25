@@ -211,3 +211,39 @@ and "Nothing was recorded that month." for a past one; the title above names the
 review. "Food is all of September 2026's spending." read awkwardly, so Home says "Food is all the
 spending this month." for the current month and "Food is all the spending in September 2026." for
 a past one.
+
+**2026-10-25 · Reports' comparison stat shows a sign** — Refines the T2 rule ("differences are shown
+as an absolute amount with words") for this one stat. Reports' stats row has room for a figure, not
+a sentence, and the prototype (screenshot 10) shows `−GH₵ 3,257.10`. The value is `+GH₵ 1,234.00`
+when more, `−GH₵ 3,257.10` (U+2212) when less, `GH₵ 0.00` when equal, and `No data` when either side
+is zero. `formatGhs` still only ever receives the absolute value; the sign is prefixed. Screen
+readers hear words instead: "GH₵ 3,257.10 less than 1–21 Sep", "… more than …", "Same as …". The
+label is "vs 1–21 Sep" for the current month ("vs 1 Sep" on the 1st) and names the previous month
+for a past one ("vs Aug 2026"). Home keeps its own sentence and its "1–31 Aug" wording for past
+months. Decided by Bossman.
+
+**2026-10-25 · First record date re-read on every trend emission** — The monthly trend never shows
+months before the first record, but `ExpenseRepository.firstExpenseDate()` is a one-off `Future`
+and the contract was not to change in T7. `firstExpenseDateProvider` watches the trend's
+`watchBetween` stream and reads the date again whenever it emits. This relies on Drift re-running
+every watched query on a table after any write to that table (drift 2.35 `QueryStream` emits
+without comparing results), so an expense added or deleted outside the six months still refreshes
+the date. If that behaviour changed, the worst case is a few empty leading months too many or too
+few until the month changes; never a wrong amount. The fake repository emits on every write too,
+and a widget test covers it: first record 3 months back gives 4 bars; adding one 8 months back
+gives 6 without a refresh. A `watchFirstExpenseDate()` in the contract would remove the
+dependency.
+
+**2026-10-25 · Stats columns sized to their content** — Screenshot 10 gives the three stats equal
+columns, and the third value runs past the page padding. Equal columns at 390dp leave about 100dp
+for "−GH₵ 3,257.10", which needs about 107dp in Plex. Each column is as wide as its own label or
+value plus padding, and any spare width is shared equally; when they don't fit, the stats stack one
+per line. In Plex at text scale 1.0 they share a line from 360dp up. Cost: the dividers don't sit
+at exact thirds.
+
+**2026-10-25 · Chart money labels capped at 40% of the chart** — The value axis is as wide as its
+widest label at the user's text size, so labels are never clipped. With very large totals at large
+text (GH₵ 5,000,000 at 2.0 on a 320dp phone), that width alone exceeded the chart and fl_chart's
+title row overflowed. The labels' column is capped at 40% of the chart's width
+(`AppSizes.chartAxisMaxShare`) and labels past it scale down, keeping every digit. Cost: tiny
+labels in that extreme case.

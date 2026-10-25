@@ -5,10 +5,10 @@ import 'package:traccash/features/expenses/presentation/expenses_providers.dart'
 import 'package:traccash/features/home/presentation/home_breakdown.dart';
 import 'package:traccash/features/home/presentation/home_providers.dart';
 import 'package:traccash/features/home/presentation/home_recent.dart';
-import 'package:traccash/features/home/presentation/home_section.dart';
 import 'package:traccash/features/home/presentation/home_total.dart';
 import 'package:traccash/shared/widgets/empty_state.dart';
 import 'package:traccash/shared/widgets/month_switcher.dart';
+import 'package:traccash/shared/widgets/section_card.dart';
 
 /// The selected month at a glance: total, comparison, category breakdown
 /// and the latest expenses.
@@ -41,7 +41,7 @@ class HomeScreen extends ConsumerWidget {
               const SizedBox(height: AppSpacing.s12),
               switch (view) {
                 AsyncData(:final value) => _HomeBody(view: value),
-                AsyncError(:final error) => HomeCard(
+                AsyncError(:final error) => SectionCard(
                   padding: const EdgeInsets.all(AppSpacing.s24),
                   child: LoadErrorState(
                     error: error,
@@ -85,12 +85,12 @@ class _HomeBody extends StatelessWidget {
         HomeTotal(view: view),
         const SizedBox(height: AppSpacing.s28),
         if (!view.hasAnyExpenses)
-          const HomeCard(
+          const SectionCard(
             padding: EdgeInsets.all(AppSpacing.s24),
             child: FirstUseState(),
           )
         else if (view.slices.isEmpty)
-          HomeCard(
+          SectionCard(
             padding: const EdgeInsets.all(AppSpacing.s24),
             child: EmptyMonthState(month: view.month),
           )

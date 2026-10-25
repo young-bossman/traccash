@@ -5,6 +5,7 @@ import 'package:traccash/app/theme/app_spacing.dart';
 import 'package:traccash/features/home/presentation/home_providers.dart';
 import 'package:traccash/features/home/presentation/home_section.dart';
 import 'package:traccash/shared/widgets/expense_tile.dart';
+import 'package:traccash/shared/widgets/section_card.dart';
 
 /// The selected month's latest expenses, on one card.
 ///
@@ -27,7 +28,7 @@ class HomeRecent extends StatelessWidget {
           onAction: () => context.go(AppRoutes.expenses),
         ),
         const SizedBox(height: AppSpacing.s8),
-        HomeCard(
+        SectionCard(
           child: Column(
             children: [
               for (final (index, expense) in recent.indexed)

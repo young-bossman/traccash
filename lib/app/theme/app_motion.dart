@@ -8,4 +8,8 @@ abstract final class AppMotion {
 
   /// Scrolling a field error or the error banner into view.
   static const Duration reveal = Duration(milliseconds: 200);
+
+  /// Chart bars growing or shrinking to new totals. fl_chart's own default;
+  /// not in the spec.
+  static const Duration chartUpdate = Duration(milliseconds: 150);
 }
