@@ -35,3 +35,9 @@ rather than being bolted on later.
 
 **2026-10-24 · Clear all data scope** — Removes expenses and user-created categories; keeps presets
 and theme, so the app returns to its first-install state without a reinstall.
+
+**2026-10-24 · Backup scope: cloud off, device transfer accepted** — `android:allowBackup="false"`
+stops Android cloud backup, so the database is never uploaded. Android 12+ device-to-device
+transfer ignores that flag and can still copy app data to a new phone. Accepted for v1: with no
+export or sync, it is the only way users keep their expenses when changing phones, and the data
+stays on hardware the user owns. Revisit when export is added.
