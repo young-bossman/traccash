@@ -21,7 +21,7 @@ Amounts are whole pesewas (`int`) everywhere; nothing about money uses `double`.
 | [docs/design/DESIGN_SPEC.md](docs/design/DESIGN_SPEC.md) | Colours, type, components, validation, interactions; screenshots in `docs/design/screens/` |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Why things are the way they are, newest last |
 | [docs/PROGRESS.md](docs/PROGRESS.md) | What each task built, and known issues |
-| [docs/AGENT_BRIEF.md](docs/AGENT_BRIEF.md) | Rules for the coding agent that wrote most of the code |
+| [docs/AGENT_BRIEF.md](docs/AGENT_BRIEF.md) | Coding rules and decisions for the project |
 
 ## Requirements
 
