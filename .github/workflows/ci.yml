@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    # dart_test.yaml fails a hung test after 60 s; this stops anything else
+    # that hangs (a stuck download, say) long before GitHub's 6-hour limit.
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          # The version the app is developed and tested with.
+          flutter-version: 3.47.7
+          cache: true
+
+      # Exactly the versions in the committed pubspec.lock.
+      - run: flutter pub get --enforce-lockfile
+
+      - name: Format
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze
+        run: flutter analyze
+
+      # Random order shows tests that only pass after another test has run.
+      # The runner prints the seed first; rerun a failure in the same order
+      # with `flutter test --test-randomize-ordering-seed <seed>`.
+      - name: Test
+        run: flutter test --test-randomize-ordering-seed random

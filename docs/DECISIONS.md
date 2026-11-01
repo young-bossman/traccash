@@ -290,3 +290,77 @@ hide every new expense, and since the chip only shows for a category that exists
 say why. After a successful clear, Settings sets the category filter back to all categories. The
 search text is left alone: it lives in the Expenses screen's text controller, and clearing only the
 provider would leave the field showing text that no longer filters.
+
+**2026-11-01 · Field borders stay below 3:1 for v1 (known accessibility gap)** — WCAG 2.1 SC 1.4.11
+(Non-text Contrast) asks for 3:1 on the visual information needed to identify a user interface
+component, such as a text field's edge. Field outlines use the design's `border` token
+(`outline`): `#D0D5DD` is 1.47:1 on the light card and 1.37:1 on the light background; `#344054`
+is 1.53:1 on the dark card and 1.70:1 on the dark background. Every field has a visible label
+above it, a focused field's border is the accent (3:1 or more in both themes) and an error border
+is the error colour (3:1 or more). Decided by Bossman: keep the design tokens, check on the
+emulator, and if fields are hard to spot change the design on purpose later (for example a
+darker outline for inputs only, through `inputDecorationTheme`). Listed in the README's known
+limitations; `color_contrast_test.dart` names it as exempt.
+
+**2026-11-01 · Schema snapshot test with generated helpers** — Changing `tables.dart` without
+bumping `schemaVersion` would install a different schema under the same version number, and a
+later migration would start from the wrong place. `test/data/schema_test.dart` uses drift_dev's
+`SchemaVerifier` with helpers generated from `drift_schemas/` into `test/generated_migrations/`. It
+fails when the tables don't match the latest snapshot (checked by changing one constraint in the
+generated v1 schema: "Schema does not match"), and migrates every snapshot to the current schema, ready for
+T10's upgrade test. The generated helpers are excluded from analysis, as `*.g.dart` is: they use
+raw `TableInfo` types, which `strict-raw-types` reports. Cost: after each schema change, two more
+commands (README, Code generation).
+
+**2026-11-01 · One list of screens for the accessibility and text-scale tests** —
+`test/widget/screen_scenarios.dart` opens 21 states (every screen, sheet and dialog, loaded, empty
+and failed) from a fresh app, each with a finder proving it got there. `accessibility_test.dart`
+runs Flutter's own guidelines on each in light and dark: tap targets of 48dp, a label on
+everything tappable, and text contrast measured on the rendered pixels. `text_scale_test.dart`
+(Ahem) and `text_scale_plex_test.dart` (Plex) open each at text scale 1.3 on 320dp and 360dp
+screens, and again with the keyboard open where a field can have focus. Checked that they bite:
+a 30dp filter button failed the tap-target check, and `#AAAAAA` secondary text failed contrast
+(2.16:1). Hand-written per-widget asserts were the alternative; they only check what someone
+thought to list. Cost: 148 widget tests, under a minute in total; a new screen or dialog must be
+added to the list to be checked.
+
+**2026-11-01 · Integration test on its own database file** — The card asks for add → restart →
+still there. The test runs the real app and the real Drift repositories, opening its database
+through the same `driftDatabase(...)` call as the app, so SQLite runs on a background isolate as
+it does for users. Only the file differs: a new directory from `Directory.systemTemp` (the app's
+cache directory on Android). Running the test on a phone therefore never reads or changes the
+expenses already there. "Restart" means unmounting the app, disposing its `ProviderContainer`,
+awaiting `close()`, then opening a new `AppDatabase` on the same file in a new container. The
+process itself isn't restarted; `integration_test` can't do that from inside the app. Using
+`path_provider` for the app's documents directory would have meant a new direct dependency. Cost:
+the app's real file name (`traccash`) isn't exercised; it is one constant in
+`database_provider.dart`.
+
+**2026-11-01 · 60-second test timeout and random order in CI** — A test that hangs (as two did
+before the `watchValue` fix) should fail in a minute, not hold CI. `dart_test.yaml` sets
+`timeout: 60s`, but a probe test showed it reaches plain `test`s only: `testWidgets` passes the
+binding's own timeout (10 minutes) to each test, which replaces the yaml's, and the hung widget
+probe ran for almost 5 minutes. `test/flutter_test_config.dart`, which Flutter runs before every
+file under `test/`, sets `AutomatedTestWidgetsFlutterBinding.defaultTestTimeout` to the same 60
+seconds; with it, both probes failed at 1:00 and the run exited. The two values are kept in step
+by comments. No test needs longer. CI runs `flutter test --test-randomize-ordering-seed random`,
+which prints the seed first, so a test that only passes after another has run shows up and can
+be rerun in the same order. The CI job itself stops after 20 minutes.
+
+**2026-11-01 · `Category.toString()` leaves out the name** — Names of categories the user
+created are user data, and `toString()` output reaches test failures and any error message that
+quotes an object. `Category` now prints only its id, as `Expense` and `ExpenseDraft` already
+leave out amounts and notes. `ValidAmount.toString()` still prints pesewas: it is a parse result
+that nothing logs, and `money_test.dart` failures need the number.
+
+**2026-11-01 · `cupertino_icons` added for go_router's Cupertino pages** — Release builds warned
+"Expected to find fonts for (packages/cupertino_icons/CupertinoIcons, MaterialIcons), but found
+(MaterialIcons)". Nothing in `lib/` uses Cupertino icons. go_router 18.1.1's builder imports its
+Cupertino page support (`src/pages/cupertino.dart`), whose `CupertinoErrorScreen` builds a
+`CupertinoNavigationBar`, and that uses `CupertinoIcons.back` (from `cupertino_ui`). go_router picks
+that path at run time (`isCupertinoApp(context)`), so the compiler can't drop it, even though
+TracCash's `MaterialApp.router` never takes it. The reference can't be removed short of forking
+go_router. Added `cupertino_icons` (2.0.0, the Flutter team's package that every new Flutter app
+starts with), approved by Bossman in T9's plan. The release build is now warning-free, and icon
+tree-shaking cuts the font from 257,628 to 848 bytes. Leaving the warning was the alternative: it
+would print on every release build and hide a real missing-font warning among the noise.

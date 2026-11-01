@@ -6,12 +6,19 @@ import 'package:traccash/app/theme/app_theme.dart';
 // WCAG 2.1 AA for normal-size text.
 const double aaText = 4.5;
 
+// WCAG 2.1 AA (1.4.11) for graphics needed to understand the content.
+const double aaGraphics = 3.0;
+
 // Exempt from this test (WCAG 1.4.3 excludes inactive components):
 // - disabled button and field text: onSurface at 38% opacity
 // - disabled button fills: onSurface at 12% opacity
 // - disabled field outline: outlineVariant
-// Non-text colours (outline, outlineVariant, chart ramp c1-c4, barMuted) are
-// out of scope here.
+// Exempt from the graphics group, recorded in DECISIONS.md:
+// - field outlines (outline, about 1.5:1): a known gap; every field has a
+//   visible label, and the focused field's border is primary.
+// - the Home breakdown bar (c1-c4): the legend and the bar's Semantics
+//   summary name every slice with its amount and share.
+// - dividers (outlineVariant): they separate rows, they carry no meaning.
 
 double contrastRatio(Color a, Color b) {
   final la = a.computeLuminance();
@@ -104,6 +111,35 @@ void main() {
           expect(
             ratio,
             greaterThanOrEqualTo(aaText),
+            reason: '$label is ${ratio.toStringAsFixed(2)}:1',
+          );
+        });
+      }
+    });
+
+    group('$name theme graphics contrast', () {
+      final s = theme.colorScheme;
+      final palette = theme.extension<AppPalette>()!;
+
+      final pairs = <String, (Color, Color)>{
+        // Trend bars, the selected category option's border, the focused
+        // field's border and the active filter's border, all on cards.
+        'primary on card': (s.primary, palette.card),
+        'primary on surface (bg)': (s.primary, s.surface),
+        // Earlier months' bars on the monthly trend.
+        'barMuted on card': (palette.barMuted, palette.card),
+        // The By category share bar on its track.
+        'primary on surfaceContainerHigh': (s.primary, s.surfaceContainerHigh),
+        // An error field's border and the amount underline in error.
+        'error on card': (s.error, palette.card),
+      };
+
+      for (final MapEntry(key: label, value: (fg, bg)) in pairs.entries) {
+        test(label, () {
+          final ratio = contrastRatio(fg, bg);
+          expect(
+            ratio,
+            greaterThanOrEqualTo(aaGraphics),
             reason: '$label is ${ratio.toStringAsFixed(2)}:1',
           );
         });

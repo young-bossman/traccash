@@ -1,0 +1,7 @@
+# A hung test fails after a minute instead of stalling CI until the job
+# limit. Override per test with `timeout:` only where a test really needs
+# longer, with a comment saying why.
+#
+# This reaches plain `test`s only. testWidgets uses the binding's timeout,
+# which test/flutter_test_config.dart sets to the same 60 seconds.
+timeout: 60s

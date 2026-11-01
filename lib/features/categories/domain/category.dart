@@ -68,8 +68,10 @@ final class Category {
     createdAt,
   );
 
+  // No name: a category the user created is named by them, and these strings
+  // can end up in test output and logs.
   @override
-  String toString() => 'Category($id, $name)';
+  String toString() => 'Category($id)';
 }
 
 /// The 8 categories every install starts with, in display order.

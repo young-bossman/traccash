@@ -12,7 +12,7 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
 - [x] T6 · Home page
 - [x] T7 · Reports page
 - [x] T8 · Settings page
-- [ ] T9 · Hardening
+- [x] T9 · Hardening
 - [ ] T10 · Release prep
 
 ## Built so far
@@ -284,6 +284,62 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
   - Removed `test/widget/settings_demo_button_test.dart`; its three cases are now in
     `settings_screen_test.dart`.
 
+### T9 · Hardening (2026-11-01)
+
+No new features.
+
+- Dependencies, both approved in T9's plan:
+  - `integration_test` (Flutter SDK, dev), added with `flutter pub add integration_test --dev
+    --sdk=flutter`. New lock entries: `flutter_driver`, `fuchsia_remote_debug_protocol`,
+    `process`, `sync_http`, `webdriver`.
+  - `cupertino_icons` 2.0.0, added with `flutter pub add cupertino_icons`. Nothing else moved.
+- `integration_test/restart_persistence_test.dart`:
+  - Runs the real app and Drift repositories on a new temporary database file, opened through
+    `driftDatabase(...)` as the app does.
+  - Adds an expense through the form, closes the connection and opens a new one on the same file.
+  - Checks the list, the edit form and the stored record: 1250 pesewas, Transport, today, the note.
+  - Passed on `emulator-5554` (Android 17, API 37).
+- Accessibility:
+  - `test/widget/screen_scenarios.dart`: 21 states (every screen, sheet and dialog; loaded,
+    empty, failed), each with a finder proving it got there.
+  - `test/widget/accessibility_test.dart`: Flutter's `androidTapTargetGuideline`,
+    `labeledTapTargetGuideline` and `textContrastGuideline` on each state in light and dark,
+    plus named checks for the icon-only buttons.
+  - `test/widget/text_scale_checks.dart`, `text_scale_test.dart` (Ahem) and
+    `text_scale_plex_test.dart` (Plex): each state at text scale 1.3 on 320 and 360dp screens,
+    and again with the keyboard open where a field can have focus.
+  - `test/unit/color_contrast_test.dart`: a 3:1 group for graphics (bars, share bar, selected,
+    focused and error borders), with field outlines and breakdown slices named as exempt.
+  - Result: everything passed on the first run; no layout or theme change was needed. Checked that
+    the tests bite: a 30dp filter button failed the tap-target check, and `#AAAAAA` secondary text
+    failed contrast at 2.16:1.
+- Schema: `test/data/schema_test.dart` with helpers generated into `test/generated_migrations/`
+  (`dart run drift_dev schema generate drift_schemas/ test/generated_migrations/`), excluded from
+  analysis in `analysis_options.yaml`. Changing one constraint in the generated v1 schema made it
+  fail ("Schema does not match").
+- Hang protection:
+  - `dart_test.yaml` (`timeout: 60s`) for plain tests.
+  - `test/flutter_test_config.dart` sets the widget binding's `defaultTestTimeout` to 60 seconds.
+    `testWidgets` otherwise passes its own 10-minute timeout, which overrides the yaml's.
+  - Probe tests that hang (since deleted) both failed at 1:00 with these in place.
+- `.github/workflows/ci.yml`:
+  - Ubuntu, Flutter 3.47.7, `flutter pub get --enforce-lockfile`.
+  - Format, analyze, then `flutter test --test-randomize-ordering-seed random`, which prints the
+    seed.
+  - 20-minute job limit.
+- Privacy: `Category.toString()` prints only the id.
+- Docs:
+  - `docs/ARCHITECTURE.md`: folder tree, layers, startup, what each screen watches, the error
+    path, data model details, migrations and snapshots, logging, testing and CI.
+  - `README.md`: setup, codegen, run, test, build, the release check, known limitations.
+  - `docs/DECISIONS.md`: 7 records.
+- Review of every catch, every await followed by context use, and every dispose: no change
+  needed (listed in the T9 summary).
+- Release build: `flutter build apk --release` succeeds with no font warning. `libapp.so` has
+  none of the six Developer-section and demo-data strings checked; a control string is found.
+- Random order: two runs with different seeds (3226870189 and 4222873233) and one in file order
+  all passed. No order-dependent test was found.
+
 ## Decisions made during implementation
 
 - **Derived colours** (not on the design board), all AA-tested: light errorContainer `#FEE4E2` /
@@ -536,6 +592,24 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
   - Reused from T3: "Loaded 41 demo expenses.", "Demo data not loaded: there are already
     expenses." and the `StorageError` message.
 
+- **Field borders below 3:1 are kept for v1** (Bossman): a known accessibility gap
+  (WCAG 2.1 SC 1.4.11), recorded in DECISIONS.md and the README. Bossman checks on the emulator
+  whether the fields are hard to spot.
+- **The integration test never touches the phone's own database**: its own temporary file, the
+  same connection type as the app. See DECISIONS.md.
+- **"Restart" in the integration test is a new connection in the same process**, as the card
+  defines it; `integration_test` can't restart the app's process from inside it.
+- **One list of screens drives both the accessibility and the text-scale tests**, so a new
+  screen or dialog is added in one place. See DECISIONS.md.
+- **Widget tests time out after 60 seconds too**, through `test/flutter_test_config.dart`. See
+  DECISIONS.md.
+- **`cupertino_icons` added rather than living with the warning**: the reference is in
+  go_router's Cupertino error page and can't be removed. See DECISIONS.md.
+- **`ValidAmount.toString()` keeps the pesewas**: nothing logs a parse result, and
+  `money_test.dart` failures need the number.
+- **The Developer section needed no change for release**: `showDeveloper` defaults to
+  `kDebugMode`, and the release check shows the compiler already drops the section.
+
 ## Known issues / follow-ups
 
 - **Recheck the back button once tabs have nested routes.** The `PopScope` in `AppShell` assumes
@@ -603,12 +677,10 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
   before the first (dark) frame. Native launch theming is outside T8.
 - **Settings not yet tapped on a device by the agent**: checked with widget tests (Ahem and Plex)
   and rendered images compared with 16-settings.png.
-- **The Android build with `package_info_plus` is unverified.** `flutter build apk --debug` failed
-  before compiling anything. The plugin's build script asks Gradle for AGP 8.12.1 (the app uses
-  9.1.0, which is cached), and downloading it failed on this machine with
-  `PKIX path building failed`: Java doesn't trust the certificate it gets for `dl.google.com`.
-  That usually means antivirus HTTPS scanning or a proxy. It failed the same way inside and outside
-  the agent's sandbox. Run the build once the machine can reach Google's Maven repository.
+- ~~The Android build with `package_info_plus` is unverified~~: resolved in T9. The `PKIX path
+  building failed` downloads were Avast's HTTPS scanning (README, Known limitations). With it
+  fixed, the debug build (for the integration test) and `flutter build apk --release` both
+  succeed.
 - **Version reads "0.1.0 (1)" until T10** bumps `version:` in `pubspec.yaml`. The screenshot
   shows 1.0.0 (1).
 - **`AppSizes.segmentChrome` mirrors Flutter's segment padding** (12 + 16, the 18dp check and
@@ -618,3 +690,14 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
   `FakeExpenseRepository.dispose()`. Both awaited Dart's root-zone completed future, which resumed
   the test outside its fake async zone (T7's note blamed `close()`; that was wrong). Covered by
   `fake_repositories_test.dart`.
+- **Field borders are about 1.5:1** against their background (WCAG 2.1 SC 1.4.11 asks for 3:1).
+  Kept for v1 by decision; see DECISIONS.md.
+- **The integration test isn't in CI**: it needs an Android emulator. Run it before a release
+  (README, Test).
+- **Running `flutter test` or `flutter pub get` during a release build breaks that build.** Both
+  rewrite `GeneratedPluginRegistrant.java` with the dev-only `integration_test` plugin, and the
+  release compile fails with `package dev.flutter.plugins.integration_test does not exist`.
+  Rebuild on its own (README, Build). Found when a probe test ran alongside the T9 release build.
+- **Not tapped by hand at large font by the agent**: text scale 1.3 and 2.0 are covered by widget
+  tests in Ahem and Plex, and the integration test drove the form on the emulator at the default
+  size.

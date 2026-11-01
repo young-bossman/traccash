@@ -53,40 +53,46 @@ when they contain code.
 
 ```text
 lib/
-  main.dart                    # Entry point: ProviderScope + app
+  main.dart                    # Opens the container, reads the stored theme, then runApp
   app/
-    app.dart                   # MaterialApp.router, themes, theme mode, en_GB locale
-    router.dart                # go_router: 4-tab shell + full-screen add/edit route
-    theme/                     # Colours, palette extension, type ramp, spacing and radius
+    app.dart                   # MaterialApp.router: themes, theme mode, en_GB locale
+    app_shell.dart             # Scaffold + NavigationBar; owns the Add expense button
+    router.dart                # go_router: 4-tab shell + full-screen add/edit routes
+    theme/                     # The only place with colours, sizes, spacing, motion
   core/
-    formatting/                # money.dart (pesewas <-> GHS), dates.dart
-    calculations/              # Pure functions: totals, shares, comparison, average, trend, chart scale
-    errors/                    # Typed app errors
+    formatting/                # money, dates, percent, lists (pure Dart)
+    calculations/              # ledger, breakdown, comparison, average, trend, chart scale
+    errors/                    # AmountError, sealed AppError
   data/
-    database/                  # Drift tables, AppDatabase (+ generated .g.dart), presets, demo seed
-  shared/
-    widgets/                   # Widgets used by 2+ features (month switcher, empty state)
+    database/                  # Tables, AppDatabase (+ .g.dart), db_errors (guardDb),
+                               # database_provider, demo_seed, simulated_failure (debug)
+  shared/                      # selected_month (today + month), reduced_motion,
+                               # text_measure, rune_length_limit
+    widgets/                   # Widgets used by 2+ features (tile, switcher, empty states)
   features/
     expenses/
-      domain/                  # Expense, ExpenseDraft
+      domain/                  # Expense, ExpenseDraft, validation
       data/                    # ExpenseRepository contract + Drift implementation
-      presentation/            # Expenses screen, ledger widgets, add/edit form, controllers
+      presentation/            # Expenses screen, ledger, filter sheet, add/edit form
     categories/
-      domain/                  # Category
+      domain/                  # Category, presets, validation
       data/                    # CategoryRepository contract + Drift implementation
       presentation/            # Category icons, picker, new-category panel
-    home/presentation/         # Home screen and breakdown widgets
-    reports/presentation/      # Reports screen and charts
+    home/presentation/         # Home screen: total, comparison, breakdown, recent
+    reports/presentation/      # Reports screen: stats, category table, trend chart
     settings/
       data/                    # SettingsRepository (theme mode)
-      presentation/            # Settings screen
+      presentation/            # Settings screen and its sections
 test/
-  unit/                        # Money, dates, calculations, colour contrast
-  data/                        # Repositories and constraints against NativeDatabase.memory()
-  widget/                      # Screens, form validation, main flows
+  unit/                        # Formatting, calculations, view state, colour contrast
+  data/                        # Repositories, constraints and schema against SQLite in memory
+  widget/                      # Screens, flows, layout (Plex), accessibility, text scale
   fakes/                       # Hand-written fake repositories for widget tests
-integration_test/              # Add -> restart -> still there
-drift_schemas/                 # Schema snapshots for migration tests
+  flutter_test_config.dart     # 60-second timeout for widget tests
+  generated_migrations/        # Generated from drift_schemas/ by drift_dev
+integration_test/              # Add -> restart -> still there, on a device
+drift_schemas/                 # Schema snapshots, one per released schema version
+.github/workflows/ci.yml       # Format, analyze, test on every push and pull request
 docs/
 ```
 
@@ -102,12 +108,18 @@ directly against an in-memory database. No further layers (use cases, services) 
 | Layer | Owns | Must not |
 | --- | --- | --- |
 | Presentation (screens, widgets) | Rendering, input collection, form-level validation messages, loading/empty/error states, UI-only state (text controllers, open sheets) | Run queries, do money arithmetic, contain business rules in `build()` |
-| State (Riverpod providers/controllers) | Coordinating operations, exposing `AsyncValue` state, mapping typed errors to user messages, shared selections such as the selected month | Know SQL or Drift table details |
+| State (Riverpod providers) | Exposing `AsyncValue` state, deriving each screen's figures and strings (`HomeView`, `ExpensesView`, `ReportsView`), shared selections such as the selected month and the Expenses filters | Know SQL or Drift table details |
 | Domain (`features/*/domain`, `core/`) | Immutable models, validation rules, calculations, formatting | Import Flutter widgets or Drift |
 | Data (repositories, database) | Persistence, mapping rows to domain models, repository-boundary validation, transactions, migrations | Format values for display |
 
 Dependency direction is one way: presentation → state → repository → database. Domain and `core/`
 code is plain Dart and can be used by any layer.
+
+The add/edit form is the one place where a widget calls a repository itself. Its text lives in
+controllers; its category, date, "Save pressed" and write in progress live in the form's `State`,
+which reads `expenseRepositoryProvider` and awaits the write. A Riverpod controller would only have
+moved those fields. The form's validation and messages are pure functions
+(`expense_form_validation.dart`), tested without widgets.
 
 ### Domain models
 
@@ -121,6 +133,14 @@ Records use stable integer primary keys from the database, never list positions.
 
 ## 5. Data flow
 
+### Startup
+
+`main()` initialises date formatting, creates the `ProviderContainer`, waits up to 1 second for the
+stored theme (`readInitialThemeMode`) so the first frame is already in it, then calls `runApp` with
+`UncontrolledProviderScope`. The database opens on first use of `appDatabaseProvider`
+(`drift_flutter`: `traccash.sqlite` in the app's documents directory, SQLite on a background
+isolate). On first open the schema is created and the 8 presets are seeded.
+
 ### Reading
 
 Screens watch providers. Providers expose repository streams (for example `watchMonth`), backed by
@@ -133,20 +153,53 @@ Screen  --watch-->  Provider  --stream-->  Repository  --query-->  Drift/SQLite
    +-------------------- new list emitted on any change ---------------+
 ```
 
-Home, Expenses and Reports share one `selectedMonthProvider`, so changing the month in one place
-changes all three.
+| Screen | Watches | Built from |
+| --- | --- | --- |
+| Home | `homeViewProvider` | `monthExpensesProvider`, `previousPeriodTotalProvider`, `hasAnyExpensesProvider`, `todayProvider`, `selectedMonthProvider` |
+| Expenses | `expensesViewProvider` | `monthExpensesProvider`, `expenseFiltersProvider`, `allCategoriesProvider`, `hasAnyExpensesProvider` |
+| Reports | `reportsViewProvider` | `monthExpensesProvider`, `previousPeriodTotalProvider`, `trendExpensesProvider` (`watchBetween`), `firstExpenseDateProvider`, `trendPeriodProvider` |
+| Settings | `themeModeProvider`, `appVersionProvider` | `SettingsRepository.watchThemeMode`, `package_info_plus` |
+| Add/edit form | `expenseByIdProvider` (edit), `allCategoriesProvider`, `todayProvider` | `getById`, `CategoryRepository.watchAll` (archived categories are filtered out of the picker unless the expense already has one) |
+
+Home, Expenses and Reports share one `selectedMonthProvider` and one `monthExpensesProvider`, so
+changing the month changes all three and their totals can't disagree. Each view provider derives
+every figure and string with the pure functions in `core/calculations/` and `core/formatting/`.
 
 ### Writing (create, edit, delete)
 
-1. The form validates input and parses the amount to pesewas.
-2. The controller disables Save (no double submit) and calls the repository, awaiting the result.
-3. The repository validates again and writes, in a transaction where more than one row is affected.
-4. On success, open streams re-emit; lists, totals and charts update; the form closes and a snackbar confirms.
-5. On failure, the controller exposes the error, the form stays open with every value intact, and
-   nothing is shown as saved.
+1. The form validates input and parses the amount to pesewas (`validateExpenseForm`).
+2. The form's `State` disables Save synchronously (no double submit) and calls the repository,
+   awaiting the result.
+3. The repository validates again and writes inside a transaction (the category check and the
+   write together).
+4. On success, open streams re-emit; lists, totals and charts update; the form closes and a snackbar
+   confirms.
+5. On failure, the form shows the error banner and stays open with every value intact. Nothing is
+   shown as saved.
 
 Every write is awaited; `unawaited_futures` is an analyzer error. After any `await` in a widget,
-`context.mounted` is checked before `context` is used.
+`mounted` / `context.mounted` is checked before `context` is used, or everything needed afterwards
+(messenger, repository, notifiers) is read before the `await`.
+
+### Errors
+
+```text
+SqliteException --guardDb / guardDbStream--> AppError --+--> AsyncValue.error --> error state (reads)
+                                                         +--> form banner or snackbar (writes)
+```
+
+Every Drift call in a repository runs through `guardDb` (futures) or `guardDbStream` (streams). They
+let `AppError`s through, turn the constraint codes a caller can explain into specific errors, and
+turn everything else into `StorageError`. Raw database exceptions never reach the UI or the
+console: their text can include the statement's parameters, which are amounts and notes. Debug
+builds print the error type and SQLite code, nothing more.
+
+A non-`AppError` from a write (a bug) still shows the form's banner, then is rethrown so it is
+reported rather than swallowed.
+
+In debug builds, Settings' "Fail the next save" sets `failNextWriteProvider`. Each Drift repository
+receives it as an optional `simulatedFailure` hook, checked after validation and before the write.
+Release builds pass null.
 
 ## 6. Money rules
 
@@ -193,17 +246,19 @@ means over the cap), then compute `cedis * 100 + pesewas` with integers (`"5"` a
 
 ## 7. Data model
 
-Schema version 1. `created_at` / `updated_at` are UTC instants. `occurred_on` is a calendar date
-with no time or time zone. Foreign keys are enabled on every connection (`PRAGMA foreign_keys = ON`
-in `beforeOpen`).
+Schema version 1 (`lib/data/database/tables.dart`). `created_at` / `updated_at` are UTC instants,
+stored as ISO-8601 text (`store_date_time_values_as_text` in `build.yaml`). `occurred_on` is a
+calendar date with no time or time zone. Booleans are stored as 0/1. Foreign keys are enabled on
+every connection (`PRAGMA foreign_keys = ON` in `beforeOpen`). Drift maps rows to `CategoryRow`,
+`ExpenseRow` and `AppSettingRow`; repositories map those to the domain models.
 
 ### `categories`
 
 | Column | Type | Constraint |
 | --- | --- | --- |
 | `id` | INTEGER | Primary key, autoincrement |
-| `name` | TEXT | Required, trimmed, internal whitespace collapsed, 1–20 characters, unique case-insensitively (`COLLATE NOCASE`) |
-| `icon_key` | TEXT | Required; one of a fixed set of keys mapped to Material icons in code |
+| `name` | TEXT | `NOT NULL UNIQUE COLLATE NOCASE CHECK (length(name) BETWEEN 1 AND 20)`. Trimmed, inner whitespace collapsed and checked for case-insensitive duplicates in Dart first (NOCASE folds ASCII only) |
+| `icon_key` | TEXT | Required; one of a fixed set of keys mapped to Material icons in `category_icons.dart` (checked by the repository) |
 | `sort_order` | INTEGER | Required; display order (presets first, then user categories by creation) |
 | `is_preset` | BOOLEAN | Required; true for the 8 seeded categories |
 | `is_archived` | BOOLEAN | Required, default `false` |
@@ -266,13 +321,19 @@ keeps the presets and `app_settings`.
 ### Generated code
 
 Drift's generated `*.g.dart` files are committed, so a fresh clone builds without a codegen step.
-After any table change: `dart run build_runner build --delete-conflicting-outputs`, then commit the
-generated file with the change.
+After any table change: `dart run build_runner build`, then commit the generated file with the
+change. (The installed build_runner ignores `--delete-conflicting-outputs` and says so.)
 
 ### Migrations
 
 - `schemaVersion` starts at 1 and increases by one for every schema change.
-- The v1 schema snapshot is exported to `drift_schemas/` so migrations can be tested against it.
+- Every released schema has a snapshot in `drift_schemas/`
+  (`dart run drift_dev schema dump lib/data/database/app_database.dart drift_schemas/`), and test
+  helpers generated from the snapshots in `test/generated_migrations/`
+  (`dart run drift_dev schema generate drift_schemas/ test/generated_migrations/`).
+- `test/data/schema_test.dart` fails if the tables no longer match the latest snapshot (a table
+  changed without a version bump and a new snapshot), and migrates every snapshot to the current
+  schema.
 - Each change gets a step in Drift's `MigrationStrategy`, with a test that migrates from the previous version.
 - Existing migration steps are never edited after release.
 - Before release, an upgrade test installs the previous build, adds data, installs the new build over
@@ -307,8 +368,8 @@ Validation happens at three layers, each with a different purpose:
 Field rules: amount as in §6; category required and not archived; date from 1 January 2000 to today
 (future dates rejected; new expenses default to today); note optional, at most 200 characters.
 
-- Repository methods translate low-level database exceptions into typed errors from `core/errors/`.
-  Controllers map them to user-facing messages that do not expose internals.
+- Repository methods translate low-level database exceptions into typed errors from `core/errors/`
+  (§5, Errors). Each `AppError` carries its user-facing `message`, which never exposes internals.
 - Exceptions are never silently swallowed; there are no empty `catch` blocks.
 - Multi-row operations (seeding, `clearAll`) run in a transaction.
 - A missing record (for example, editing an expense deleted elsewhere) is reported, not ignored.
@@ -316,14 +377,18 @@ Field rules: amount as in §6; category required and not archived; date from 1 J
 
 ## 10. Security and privacy
 
-- **No sensitive data in logs.** `avoid_print` is an analyzer error. There is no logging framework;
-  any diagnostic output uses `debugPrint` inside `kDebugMode` and never includes amounts, notes or records.
+- **No sensitive data in logs.** `avoid_print` is an analyzer error. There is no logging framework.
+  The two `debugPrint`s are inside `kDebugMode` and print an error type and code only. `toString()`
+  on `Expense`, `ExpenseDraft` and `Category` leaves out amounts, notes and names, and raw SQLite
+  exceptions (whose text can include a statement's parameters) never leave the repositories.
 - **Android backup.** `android:allowBackup="false"` for v1, so the database is never uploaded to cloud
   backup. This keeps the Settings statement ("stored on this device… does not sync or upload") true.
   Android 12+ device-to-device transfer can still copy app data between the user's own phones; this is
   accepted for v1 and recorded in `DECISIONS.md`. Revisit when export is added.
 - **Debug-only tools.** The demo-data seeder, Clear all data and the simulated save failure exist only
-  when `kDebugMode` is true. They never ship in release builds.
+  when `kDebugMode` is true. `kDebugMode` is a compile-time constant, so the release compiler drops
+  the Developer section entirely; the README's build section shows how to check the release binary
+  for its strings.
 - **Release builds** use `--obfuscate --split-debug-info=build-symbols/`. Symbols are kept safely
   outside git so production stack traces can be decoded.
 - **Signing.** The keystore and `key.properties` are never committed. Both are in `.gitignore`.
@@ -335,19 +400,35 @@ Field rules: amount as in §6; category required and not archived; date from 1 J
 
 - **Unit:** amount parsing (every row of the §6 table, including comma cases), GHS formatting, date
   handling (month boundaries, December→January, leap years), calculations (category totals reconcile
-  with the monthly total, shares total 100.0%, comparison, average, chart scale), colour contrast of
-  text/background pairs.
+  with the monthly total, shares total 100.0%, comparison, average, chart scale), each screen's view
+  state, colour contrast of every text/background pair (4.5:1) and of meaningful graphics (3:1).
 - **Data:** repositories against `NativeDatabase.memory()`: CRUD, restore keeps the same id,
   constraint violations at repository and database level, foreign-key restrict, case-insensitive
-  duplicate names, archive behaviour, month and range queries across a year boundary, `clearAll`.
-- **Widget:** form validation and save states (including failed save and double tap), discard
-  confirmation, list grouping, empty / no-results / first-use states, theme setting.
-- **Integration:** add an expense, restart the app, verify it is still there.
+  duplicate names, archive behaviour, month and range queries across a year boundary, `clearAll`,
+  the simulated failure hook, and the schema against its snapshots.
+- **Widget:** every screen on hand-written fakes (`test/widget/test_app.dart` pumps the whole app):
+  form validation and save states (including failed save and double tap), discard confirmation,
+  list grouping, empty / no-results / first-use / error states, theme setting. Layout tests load
+  IBM Plex Sans for real glyph widths; the rest run in the wider Ahem test font.
+- **Accessibility:** `test/widget/screen_scenarios.dart` lists every screen, sheet and dialog in each
+  state. `accessibility_test.dart` runs Flutter's tap target (48dp), label and text contrast
+  guidelines on each, in light and dark. `text_scale_test.dart` (Ahem) and
+  `text_scale_plex_test.dart` (Plex) open each at text scale 1.3 on 320dp and 360dp screens, with
+  the keyboard open where a field can have focus, and fail on any overflow. The screen tests also
+  cover text scale 2.0.
+- **Integration:** `integration_test/restart_persistence_test.dart` adds an expense through the
+  form on a device, closes the database, opens a new connection on the same file, and checks the
+  list, the edit form and the stored record (amount, category, date, note). It uses its own
+  temporary database file, never the phone's.
 - **Manual release checklist:** physical device, airplane mode, restart persistence, full CRUD, light
   and dark themes, large text, upgrade over a previous build.
 
 Before every commit: `dart format --output=none --set-exit-if-changed .`, `flutter analyze` and
-`flutter test` must pass. CI runs the same three checks.
+`flutter test` must pass. CI (`.github/workflows/ci.yml`) runs the same three checks on Flutter
+3.47.7 with the locked package versions, and runs the tests in a random order (the seed is printed
+first). Every test fails after 60 seconds (`dart_test.yaml` for plain tests,
+`test/flutter_test_config.dart` for widget tests), so a hang fails fast instead of stalling CI.
+The integration test needs a device, so it isn't in CI.
 
 ## 12. Out of scope for v1
 
