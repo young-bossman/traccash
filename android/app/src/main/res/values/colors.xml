@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copies of tokens in lib/app/theme/app_colors.dart, which Android resources can't read.
+     test/unit/android_resources_test.dart fails if they drift apart. -->
+<resources>
+    <!-- AppColorsLight.bg: the launch screen and the window behind Flutter. -->
+    <color name="window_background">#F5F7FA</color>
+    <!-- AppColorsLight.accent: the launcher icon's background, in both themes. -->
+    <color name="ic_launcher_background">#0F7B5F</color>
+</resources>

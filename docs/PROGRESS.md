@@ -13,7 +13,7 @@ Maintained by the coding agent at the end of every task. Read at the start of ev
 - [x] T7 · Reports page
 - [x] T8 · Settings page
 - [x] T9 · Hardening
-- [ ] T10 · Release prep
+- [x] T10 · Release prep
 
 ## Built so far
 
@@ -340,6 +340,114 @@ No new features.
 - Random order: two runs with different seeds (3226870189 and 4222873233) and one in file order
   all passed. No order-dependent test was found.
 
+### T10 · Release prep (2026-11-01)
+
+- **Signing** (`android/app/build.gradle.kts`):
+  - A `release` signing config is built from `android/key.properties` (`storeFile`,
+    `storePassword`, `keyAlias`, `keyPassword`). A missing or blank key stops the build with a
+    message naming it.
+  - Without the file, a release build stops before compiling ("Release builds need
+    android/key.properties and the upload keystore. See README, Release."), through
+    `gradle.taskGraph.whenReady` checking for `:app:preReleaseBuild`. Debug and profile builds are
+    unaffected. No debug-key fallback (DECISIONS.md).
+  - The two outdated template TODOs are gone.
+- **Release ABIs** (`android/app/build.gradle.kts`): `androidComponents.onVariants` for the
+  release build type adds `**/x86/**`, `**/x86_64/**` and `**/riscv64/**` to
+  `packaging.jniLibs.excludes`, so the release APK holds only ARM libraries. Debug and profile keep
+  them all. The comment explains why: `jni`'s `libdartjni.so`, and why not `abiFilters`.
+- **`.gitignore`**: no change. `key.properties`, `**/*.jks`, `**/*.keystore` and `/build-symbols/`
+  were already there, and `android/.gitignore` repeats the first three. Checked by reading the
+  patterns, not with git.
+- **Version** `1.0.0+1` in `pubspec.yaml`. "0.1.0 (1)" became "1.0.0 (1)" in `testAppVersion`,
+  `settings_screen_test.dart`, `settings_layout_test.dart` and the doc comments in
+  `settings_providers.dart` and `settings_row.dart`.
+- **Launcher** (decided by Bossman in the plan's answers):
+  - Label "TracCash" in `AndroidManifest.xml`.
+  - Adaptive icon `res/mipmap-anydpi-v26/ic_launcher.xml`: background `@color/ic_launcher_background`
+    (`#0F7B5F`), foreground and Android 13+ monochrome layer `res/drawable/ic_launcher_foreground.xml`
+    (Home's `Icons.notes` glyph, white, 36 × 24dp in the 108dp canvas).
+  - minSdk is 24 (Flutter's default), below adaptive icons' 26. The five `mipmap-*dpi/ic_launcher.png`
+    files (Flutter's logo) were replaced with legacy PNGs of the same design, drawn by a PowerShell
+    script with System.Drawing (DECISIONS.md). They were the only Flutter logos; the project is
+    Android-only.
+- **Launch screen**:
+  - `res/values/colors.xml` (`window_background` `#F5F7FA`, `ic_launcher_background`) and
+    `res/values-night/colors.xml` (`window_background` `#101827`) are new.
+  - `values/styles.xml` and `values-night/styles.xml`: `LaunchTheme` and `NormalTheme` use
+    `@color/window_background`. On Android 12+ the system's icon is made transparent
+    (`windowSplashScreenAnimatedIcon`) and its background set to the same colour.
+  - `res/drawable/launch_background.xml` and `res/drawable-v21/launch_background.xml` were deleted
+    (unused).
+- **Test**: `test/unit/android_resources_test.dart` checks that the hex copies in `colors.xml` and
+  the icon's fill match `AppColorsLight.bg` / `AppColorsDark.bg` / `accent` / `onAccent`. Checked
+  that it bites: `#FFFFFF` for the light background failed with "Expected: '#F5F7FA'".
+- **Docs**:
+  - `README.md`: Build became Release. It covers the upload key (keytool command, `key.properties`
+    format, backup), the build command (`flutter build apk --release --target-platform
+    android-arm,android-arm64 --obfuscate --split-debug-info=build-symbols/`), which devices it
+    runs on, the version, the app bundle line, keeping the symbols, the string, DWARF (both ABIs)
+    and permission checks, and the 9-step release checklist.
+  - `docs/ARCHITECTURE.md` §10 and §11, `docs/DECISIONS.md` (4 records).
+- **Debug-only audit, no code change**:
+  - `kDebugMode` is used in five places: the Developer section default, the failure hook, the
+    seeder, and the two `debugPrint`s.
+  - There is no `print`, Drift `logStatements`, `debugLogDiagnostics` or `ProviderObserver`.
+  - `runtimeType` appears only in those two debug prints, and theme mode is stored as spelled-out
+    strings, so obfuscation changes nothing stored.
+  - `clearAll()` keeps no guard of its own; its only caller is compiled out (decided in the plan).
+- **Verified by building**:
+  - With no `key.properties`: the release build stopped after 20 s with the message, and
+    `flutter build apk --debug` succeeded.
+  - With a temporary `android/key.properties` pointing at `~/.android/debug.keystore`, used three
+    times and deleted straight after each build (confirmed gone each time). The first two commands
+    were replaced (DECISIONS.md):
+    - **`--split-per-abi`**: arm64-v8a 19.7 MiB, armeabi-v7a 17.2 MiB, x86_64 21.1 MiB, with
+      versionCodes 2001, 1001 and 4001. T9's universal APK was 60.6 MiB.
+    - **`--target-platform android-arm64`**: 19.9 MiB, versionCode 1. Flutter's and the app's
+      libraries were arm64 only, but `jni`'s `libdartjni.so` was also packaged for armeabi-v7a and
+      x86_64.
+    - **Final: `--target-platform android-arm,android-arm64`, with the release exclusions**:
+      `app-release.apk`, 38,037,049 bytes (36.3 MiB).
+      - aapt2 badging: `native-code: 'arm64-v8a' 'armeabi-v7a'`, versionCode 1, versionName
+        1.0.0, label `TracCash`.
+      - Each ABI has the full set: `libapp.so`, `libflutter.so`, `libsqlite3.so`,
+        `libdartjni.so`.
+      - `build-symbols/` held `app.android-arm.symbols` (3.1 MiB) and `app.android-arm64.symbols`
+        (3.6 MiB).
+      - `apksigner` showed the certificate of the keystore the file named (SHA-256 `72a26ac5…`).
+      - For both `libapp.so`s: the six strings had 0 matches, with 1 for the control, and
+        `.debug_info` had 0. Flutter leaves stripping to AGP: its `stripReleaseDebugSymbols`
+        output (6.36 MB, from 10.07 MB, for arm64 in the first build) is byte-identical to the
+        APK's `libapp.so`.
+      - `aapt2 dump permissions` listed only AndroidX's signature-level
+        `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` (from `androidx.core` 1.13.1).
+  - On `emulator-5554` (Android 17, API 37; abilist `x86_64,arm64-v8a`):
+    - **The x86_64 split APK**, installed over the debug build with `adb install -r`, started with
+      the existing data. Settings had no Developer section. App info showed the green icon,
+      "TracCash" and "No permissions requested".
+    - **The launch screen**, captured during a cold start, was plain `#F5F7FA` in light mode and
+      `#101827` in dark mode, with no icon. Dark mode's first frame used the same `#101827`.
+    - **The arm64-only APK** installed, but Android picked `x86_64` (because of
+      `lib/x86_64/libdartjni.so`), and it stopped at launch: "libflutter.so … is for EM_AARCH64
+      instead of EM_X86_64".
+    - **The final APK, installed as an x86_64-only device would**
+      (`adb install --abi x86_64`): refused with `INSTALL_FAILED_NO_MATCHING_ABIS: Failed to
+      extract native libraries`. The debug build stayed installed.
+    - **The final APK with a plain `adb install -r`**: accepted as `arm64-v8a`, because this
+      emulator translates ARM. It ran: Home, then Settings with Version "1.0.0 (1)" and no
+      Developer section.
+    - **`flutter run -d emulator-5554 --debug --no-resident`** then built, installed and launched
+      the debug build (x86_64, debuggable): exit 0.
+  - The emulator was restored each time: the debug build is reinstalled and night mode is off, as
+    it was. After the first two rounds the database had the same SHA-256 as before.
+  - After the third round, `app_settings` had a new row, `theme_mode = light`; expenses (0) and
+    categories (8) were unchanged. The release app logged route changes between 19:38:50 and
+    19:39:35, when the agent sent no input, so someone was using it. The agent's only tap was the
+    Settings tab, and the screenshot after it still showed System. Left as it is rather than
+    overwritten.
+  - The test APKs and their `build-symbols/` were deleted, being signed with the debug key. That
+    included the pre-T10 `app-release.apk`, which a test build had overwritten.
+
 ## Decisions made during implementation
 
 - **Derived colours** (not on the design board), all AA-tested: light errorContainer `#FEE4E2` /
@@ -610,6 +718,21 @@ No new features.
 - **The Developer section needed no change for release**: `showDeveloper` defaults to
   `kDebugMode`, and the release check shows the compiler already drops the section.
 
+- **No debug-key fallback**: a release build without `android/key.properties` stops before
+  compiling. See DECISIONS.md.
+- **The launch screen follows the device**, in the background tokens, with no logo (also on
+  Android 12+). Accepted by Bossman. See DECISIONS.md.
+- **The icon is plain resources**, with no generator package. The legacy PNGs use Home's tile
+  proportions. See DECISIONS.md.
+- **One APK for both ARM types (`--target-platform android-arm,android-arm64`), not split APKs**
+  (Bossman). The versionCode is the pubspec build number: Version reads 1.0.0 (1), and 1.0.0 (2) in
+  the upgrade test.
+- **Release builds leave out non-ARM native libraries** (Bossman), with `packaging.jniLibs.excludes`
+  through the variant API, because a release `abiFilters` adds to Flutter's list instead of
+  replacing it. x86 devices refuse the install instead of crashing. See DECISIONS.md.
+- **The checklist uses `adb install`, not `flutter install`**, because `flutter install` uninstalls
+  first, which deletes the data the upgrade test needs.
+
 ## Known issues / follow-ups
 
 - **Recheck the back button once tabs have nested routes.** The `PopScope` in `AppShell` assumes
@@ -672,17 +795,17 @@ No new features.
   both update, but not in the same frame, so for a few milliseconds they can differ.
 - **Monthly x labels have no year** ("Dec", "Jan", "Feb" across a year boundary); the screen reader
   summary adds years in that case.
-- **The Android launch screen follows the device, not the app's theme.** `values-night/styles.xml`
-  picks the native splash, so with Dark chosen on a light phone the splash is light for a moment
-  before the first (dark) frame. Native launch theming is outside T8.
+- **The Android launch screen follows the device, not the app's theme.** With Dark chosen on a
+  light phone it is light for a moment before the first (dark) frame. Accepted in T10 (DECISIONS.md);
+  it now uses the app's background colours instead of white.
 - **Settings not yet tapped on a device by the agent**: checked with widget tests (Ahem and Plex)
   and rendered images compared with 16-settings.png.
 - ~~The Android build with `package_info_plus` is unverified~~: resolved in T9. The `PKIX path
   building failed` downloads were Avast's HTTPS scanning (README, Known limitations). With it
   fixed, the debug build (for the integration test) and `flutter build apk --release` both
   succeed.
-- **Version reads "0.1.0 (1)" until T10** bumps `version:` in `pubspec.yaml`. The screenshot
-  shows 1.0.0 (1).
+- ~~Version reads "0.1.0 (1)" until T10~~: `pubspec.yaml` is `1.0.0+1`, and the release APK's
+  versionCode is 1, so Version reads 1.0.0 (1) as in screenshot 16.
 - **`AppSizes.segmentChrome` mirrors Flutter's segment padding** (12 + 16, the 18dp check and
   an 8dp gap). Recheck it after a Flutter upgrade; `settings_layout_test` catches a label that
   breaks.
@@ -701,3 +824,18 @@ No new features.
 - **Not tapped by hand at large font by the agent**: text scale 1.3 and 2.0 are covered by widget
   tests in Ahem and Plex, and the integration test drove the form on the emulator at the default
   size.
+- **No build has been signed with the real upload key yet.** The keystore is Bossman's to create
+  (README, One-time setup). The signing setup was tested with the debug keystore.
+- **The agent didn't write data in a release build.** On the emulator the obfuscated release opened
+  the database, read the existing data and the theme, and showed Home and Settings. Adding, editing
+  and deleting are left to the release checklist on a real phone.
+- **The legacy launcher PNGs (API 24–25) were checked as images only**: no Android 7 device or
+  emulator was run.
+- ~~The release APK installs on 32-bit phones and x86_64 emulators, then stops at launch~~:
+  resolved in T10. The APK now includes 32-bit ARM, and release builds leave out non-ARM
+  libraries.
+- **x86 and x86_64 devices can't install the release APK**: Android refuses it with
+  `INSTALL_FAILED_NO_MATCHING_ABIS`, unless the device translates ARM apps (recent emulator images,
+  many x86 Chromebooks), in which case it runs the ARM code. Use a debug build on the emulator.
+- **The 32-bit ARM code hasn't run on a device**: the emulator only translates arm64. The APK has
+  the full armeabi-v7a set, and its `libapp.so` passed the same checks.

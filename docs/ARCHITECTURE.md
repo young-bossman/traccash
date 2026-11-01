@@ -389,11 +389,19 @@ Field rules: amount as in §6; category required and not archived; date from 1 J
   when `kDebugMode` is true. `kDebugMode` is a compile-time constant, so the release compiler drops
   the Developer section entirely; the README's build section shows how to check the release binary
   for its strings.
-- **Release builds** use `--obfuscate --split-debug-info=build-symbols/`. Symbols are kept safely
-  outside git so production stack traces can be decoded.
-- **Signing.** The keystore and `key.properties` are never committed. Both are in `.gitignore`.
+- **Release builds** use `--target-platform android-arm,android-arm64 --obfuscate
+  --split-debug-info=build-symbols/`: one APK for 32-bit and 64-bit ARM phones. The release build
+  type leaves out non-ARM native libraries, so x86 devices refuse the install rather than crash.
+  Symbols
+  are kept safely outside git, one copy per released build, so production stack traces can be
+  decoded.
+- **Signing.** `android/app/build.gradle.kts` reads the upload key from `android/key.properties`.
+  A release build without it stops before compiling. There is no fallback to the debug key: an app
+  signed with a different key can't be updated without uninstalling, which deletes its data. The
+  keystore and `key.properties` are never committed. Both are in `.gitignore`.
 - **Permissions.** The app requests no runtime permissions. The `INTERNET` permission exists only in
-  the debug and profile manifests, for tooling.
+  the debug and profile manifests, for tooling. The release APK's only entry is AndroidX's
+  signature-level `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`, which no user is asked for.
 - **Encryption at rest** (SQLCipher) is a v2 option if the threat model requires it.
 
 ## 11. Testing strategy
@@ -420,8 +428,8 @@ Field rules: amount as in §6; category required and not archived; date from 1 J
   form on a device, closes the database, opens a new connection on the same file, and checks the
   list, the edit form and the stored record (amount, category, date, note). It uses its own
   temporary database file, never the phone's.
-- **Manual release checklist:** physical device, airplane mode, restart persistence, full CRUD, light
-  and dark themes, large text, upgrade over a previous build.
+- **Manual release checklist** (README, Release checklist): physical device, airplane mode, restart
+  persistence, full CRUD, light and dark themes, large text, upgrade over a previous build.
 
 Before every commit: `dart format --output=none --set-exit-if-changed .`, `flutter analyze` and
 `flutter test` must pass. CI (`.github/workflows/ci.yml`) runs the same three checks on Flutter

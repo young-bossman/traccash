@@ -46,7 +46,7 @@ class SettingsRow extends StatelessWidget {
   final String? subtitle;
   final IconData? icon;
 
-  /// Text at the end of the title line ("0.1.0 (1)"). It wraps under the
+  /// Text at the end of the title line ("1.0.0 (1)"). It wraps under the
   /// title when large text leaves no room beside it.
   final String? value;
 

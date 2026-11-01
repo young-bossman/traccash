@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dark-device copies of tokens in lib/app/theme/app_colors.dart (see values/colors.xml). -->
+<resources>
+    <!-- AppColorsDark.bg. -->
+    <color name="window_background">#101827</color>
+</resources>

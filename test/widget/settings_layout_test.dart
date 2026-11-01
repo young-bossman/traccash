@@ -59,7 +59,7 @@ void main() {
     }
 
     final title = tester.getRect(find.text('Version'));
-    final value = tester.getRect(find.text('0.1.0 (1)'));
+    final value = tester.getRect(find.text('1.0.0 (1)'));
     expect(value.center.dy, moreOrLessEquals(title.center.dy, epsilon: 1));
     // The card's inner padding from its right edge.
     expect(value.right, 390 - AppSpacing.s20 - AppSpacing.s16);

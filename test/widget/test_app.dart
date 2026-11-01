@@ -34,7 +34,7 @@ abstract final class PresetIds {
 }
 
 /// What Settings shows as the version in widget tests.
-const String testAppVersion = '0.1.0 (1)';
+const String testAppVersion = '1.0.0 (1)';
 
 /// The fakes behind a pumped app, for seeding and inspecting data.
 class TestApp {

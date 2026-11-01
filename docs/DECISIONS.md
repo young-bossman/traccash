@@ -364,3 +364,68 @@ go_router. Added `cupertino_icons` (2.0.0, the Flutter team's package that every
 starts with), approved by Bossman in T9's plan. The release build is now warning-free, and icon
 tree-shaking cuts the font from 257,628 to 848 bytes. Leaving the warning was the alternative: it
 would print on every release build and hide a real missing-font warning among the noise.
+
+**2026-11-01 · No debug-key fallback for release builds** — Flutter's template signs release builds
+with the debug key so `flutter run --release` works out of the box. Android installs an update only
+if it is signed with the same key as the installed app. A debug-signed release on a phone could
+therefore never be updated by a properly signed build without uninstalling, and uninstalling
+deletes every expense (cloud backup is off and there is no export). `build.gradle.kts` reads
+`android/key.properties`. When it is missing, a release build stops before compiling, with a
+message naming the file; debug and profile builds are unaffected. Cost: `flutter run --release`
+needs the upload key too.
+
+**2026-11-01 · Launch screen in the app's background colours, following the device** — Android
+shows the launch screen from the launcher tap until Flutter's first frame. It was white, so a
+phone in dark mode flashed white. `LaunchTheme` and `NormalTheme` now use the light background
+token (`#F5F7FA`) in `values/` and the dark one (`#101827`) in `values-night/`, with no logo. On
+Android 12+, which draws the app icon on its own launch screen, the icon is made transparent
+(`windowSplashScreenAnimatedIcon`). This screen can only follow the device's dark mode, not the
+theme chosen in Settings: Android shows it before any app code runs, so the stored choice hasn't
+been read. With Dark chosen on a light phone, the launch screen is light for a moment and the first
+frame is dark. Accepted for v1 (decided by Bossman). The alternative was native code: on Android
+13+ the app can tell the system which launch theme to use next time (`setSplashScreenTheme`),
+which would need a platform channel and Kotlin for a moment's flash. The hex values are copies of `app_colors.dart`; `test/unit/android_resources_test.dart` fails if
+they drift apart.
+
+**2026-11-01 · Launcher icon drawn as resources, no generator package** — The app shipped
+Flutter's logo. The icon is now an adaptive icon. Its background is the light accent `#0F7B5F`,
+and its foreground is a vector of Home's logo glyph (`Icons.notes`, white) at the same proportion
+as in Home's tile, well inside the 66dp safe zone. The same vector is the Android 13+ monochrome
+(themed icon) layer. minSdk is 24 and adaptive icons start at 26, so `mipmap-*dpi/ic_launcher.png`
+are legacy PNGs of the same design: a 44dp rounded square on a 48dp canvas, with the radius and
+glyph proportions of Home's 28dp tile. They were drawn at the five densities by a short PowerShell
+script using .NET's System.Drawing (no install), not committed: three rectangles and a rounded
+square. `flutter_launcher_icons` was the alternative, a dev dependency for a one-off job. Cost:
+changing the icon means editing the vector and redrawing five PNGs.
+
+**2026-11-01 · One APK for both ARM types, non-ARM libraries left out** — Three ways of building
+the release APK were tried before this one was chosen (decided by Bossman):
+
+- **Every processor type** (no flag): one APK of about 61 MiB.
+- **`--split-per-abi`**: a 19.7 MiB arm64 APK. But Flutter gives each split APK its own
+  versionCode, 1000 × the processor type's number plus the build number, so 1.0.0+1 became 2001.
+  Settings read "1.0.0 (2001)" instead of screenshot 16's "1.0.0 (1)", and every later install on
+  that phone would need a versionCode above 2001.
+- **`--target-platform android-arm64`**: one 19.9 MiB APK with versionCode 1, but it left out 32-bit
+  phones, which some budget Android Go models are. Worse, Flutter's Gradle plugin always sets
+  `abiFilters` to armeabi-v7a, arm64-v8a and x86_64, whatever `--target-platform` says, so
+  plugins' native libraries still came for all three. `jni`'s `libdartjni.so` gave the APK
+  `armeabi-v7a` and `x86_64` folders, and a device with either installed it, picked that type, and
+  stopped at launch ("libflutter.so not found"). Checked on the emulator, which chose x86_64 although
+  it can also run arm64.
+
+The release command is now `flutter build apk --release --target-platform android-arm,android-arm64
+--obfuscate --split-debug-info=build-symbols/`: one 36.3 MiB APK with versionCode 1 that runs on
+every ARM phone. In `build.gradle.kts`, the release build type also leaves non-ARM libraries out
+(`packaging.jniLibs.excludes` for `x86`, `x86_64` and `riscv64`, through `androidComponents`), so
+the APK lists only `armeabi-v7a` and `arm64-v8a`. An x86 or x86_64 device then refuses it with
+`INSTALL_FAILED_NO_MATCHING_ABIS` (checked with `adb install --abi x86_64`) instead of installing
+an app that can't start. A device that can translate ARM, like this emulator, installs the ARM code
+and runs it.
+
+Debug and profile builds keep every library, so `flutter run` works on the x86_64 emulator. An
+`abiFilters` entry on the release build type wasn't enough: AGP adds a build type's filters to the
+default config's (`MergedNdkConfig` uses `addAll`), where Flutter has already put x86_64.
+
+Cost: 16 MiB more than arm64 alone, two symbols files to keep per build, and a list of non-ARM
+types to extend if Android adds another. An app bundle uses the same flags.

@@ -11,7 +11,7 @@ final StreamProvider<ThemeMode> themeModeProvider = StreamProvider<ThemeMode>(
   retry: noRetry,
 );
 
-/// "0.1.0 (1)": the version name and build number Android reports for the
+/// "1.0.0 (1)": the version name and build number Android reports for the
 /// installed app. Widget tests override it.
 final FutureProvider<String> appVersionProvider = FutureProvider<String>((
   ref,

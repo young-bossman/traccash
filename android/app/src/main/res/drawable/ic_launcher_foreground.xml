@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home's logo glyph (Icons.notes) in white (AppColorsLight.onAccent). Material's 24-unit
+     glyph drawn at 48dp (2x) in the middle of the 108dp adaptive-icon canvas, as large in the
+     72dp visible area as it is in Home's 28dp tile. Its bars span 36 x 24dp, well inside the
+     66dp safe zone every launcher mask keeps. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M36,42h36v4h-36z M36,52h36v4h-36z M36,62h24v4h-24z" />
+</vector>
